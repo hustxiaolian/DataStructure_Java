@@ -11,6 +11,8 @@ public final class Sort {
 	 * @param arr 需要排序的数组
 	 */
 	public static <AnyType extends Comparable<? super AnyType>> void insertionSort(AnyType[] arr) {
+		insertionSort(arr, 0, arr.length - 1);
+		/*
 		int insertionPos;
 		
 		for(int nowPos = 1;nowPos < arr.length; ++nowPos) {
@@ -25,6 +27,23 @@ public final class Sort {
 			}
 			//插入
 			arr[insertionPos] = nowItem;
+		}
+		*/
+	}
+	
+	/**
+	 * 
+	 */
+	private static <AnyType extends Comparable<? super AnyType>> void insertionSort(AnyType[] arr,int left,int right) {
+		for(int i = left + 1;i <= right;++i) {
+			AnyType temp = arr[i];
+			
+			int j;
+			for( j = i;j > left && temp.compareTo(arr[j - 1]) < 0;--j) {
+				arr[j] = arr[j - 1];
+			}
+			
+			arr[j] = temp;
 		}
 	}
 	
@@ -233,7 +252,7 @@ public final class Sort {
 	 * 
 	 * 最后，当处理N=10左右的小数组，直接选择插入排序好得多。
 	 * 
-	 * 
+	 * 实际测试：46-82ms
 	 * @param arr
 	 */
 	private static final int CUTOFF = 10;//不再进行快速排序的数组大小
@@ -261,9 +280,7 @@ public final class Sort {
 				while( arr[--j].compareTo(pivot) > 0) {}
 				
 				if(i < j) {
-					AnyType temp = arr[i];
-					arr[i] = arr[j];
-					arr[j] = temp;
+					arraySwap(arr, i, j);
 				}
 				else {
 					break;
@@ -277,7 +294,7 @@ public final class Sort {
 		}
 		else {
 			//小数组情况直接调用插入排序快得多
-			insertionSort(arr);
+			insertionSort(arr,left,right);
 		}
 	}
 	
@@ -295,24 +312,16 @@ public final class Sort {
 		int center = (left + right) / 2;
 		
 		if(arr[left].compareTo(arr[center]) > 0) {
-			AnyType temp = arr[left];
-			arr[left] = arr[center];
-			arr[center] = temp;
+			arraySwap(arr, left, center);
 		}
 		if(arr[left].compareTo(arr[right]) > 0) {
-			AnyType temp = arr[left];
-			arr[left] = arr[right];
-			arr[right] = temp;
+			arraySwap(arr, left, right);
 		}
 		if(arr[center].compareTo(arr[right]) > 0) {
-			AnyType temp = arr[center];
-			arr[center] = arr[right];
-			arr[right] = temp;
+			arraySwap(arr, center, right);
 		}
 		//
-		AnyType temp = arr[center];
-		arr[center] = arr[right - 1];
-		arr[right - 1] = temp;
+		arraySwap(arr, center, right - 1);
 		return arr[right - 1];
 	}
 }

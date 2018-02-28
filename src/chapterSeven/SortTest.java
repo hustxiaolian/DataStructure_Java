@@ -6,7 +6,7 @@ public class SortTest {
 		Integer[] arr = generateMillionRandomIntNum(1000,100000);
 		//Integer[] arr = {1,6,5,8,9,7,11,20,96,3,2,11,55,22,99,88,77,20,57,87,30};
 		long start = System.currentTimeMillis();
-		Sort.quickSort(arr);
+		Sort.binaryHeapSort(arr);
 		long end1 = System.currentTimeMillis();
 		System.out.println("time1:" + (end1 - start));
 		/*

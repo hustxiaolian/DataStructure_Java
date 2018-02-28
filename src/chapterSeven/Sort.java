@@ -85,7 +85,7 @@ public final class Sort {
 	 */
 	public static <AnyType extends Comparable<? super AnyType>> void binaryHeapSort(AnyType[] arr) {
 		//循环下滤建立二叉堆
-		for(int i = arr.length / 2;i >= 0;--i) {
+		for(int i = arr.length / 2 - 1;i >= 0;--i) {
 			percDown(arr, i, arr.length);
 		}
 		//使用二叉堆的deleteMin操作
@@ -111,7 +111,7 @@ public final class Sort {
 				++child;
 			}
 			//看当前的hole是否满足堆序性要求
-			if(arr[i].compareTo(arr[child]) < 0) {
+			if(percDownItem.compareTo(arr[child]) < 0) {
 				break;
 			}
 			//否则将hole继续沿着儿子路径下滤

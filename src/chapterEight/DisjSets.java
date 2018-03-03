@@ -120,4 +120,23 @@ public class DisjSets {
 			return s[x] = findInPathCompresion(s[x]);
 		}
 	}
+	
+	/**
+	 * ±ãÓÚÊä³ö¹Û²ì
+	 */
+	@Override
+	public String toString() {
+		StringBuffer sb = new StringBuffer();
+		for(int i = 0;i < this.s.length; ++i) {
+			sb.append("\t").append(i);
+		}
+		sb.append("\n");
+		
+		for(int i = 0;i < this.s.length; ++i) {
+			sb.append("\t").append(s[i]);
+		}
+		sb.append("\n");
+		
+		return sb.toString();
+	}
 }

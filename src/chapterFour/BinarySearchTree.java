@@ -384,4 +384,39 @@ public class BinarySearchTree<AnyType extends Comparable<? super AnyType>>{
 		}
 	}
 	
+	/**
+	 * 书中第4.37题。编写一个方法以二叉查找树T和两个有序的关键k1<k2作为输入。打印书中所有满足k1 <x <k2的元素。
+	 * 思路，递归地实现：
+	 * 记得画一个数轴理解，树的全部元素构成一个有序的数轴，左右边界就相当于我们在数轴上任一划定了一个范围，
+	 * 同时，而我们递归所用的t就当于一个入口，如何才能遍历范围内的元素呢。
+	 * 分三种情况：
+	 * 1. 如果t在范围内，我们应该递归的方向是向两边扩展，也就是左右都要加入到递归队列中
+	 * 2. 如果t在范围的右边，由于边界不变，我们递归变得是t，根据树的有序性，我们应该把t往左边移，直到它变回范围内，也就是要递归到它的左子树
+	 * 	即{@code if(lower < t.data) { printRanger(lower, upper, t.left)}},即该句的精妙在于它完美地包含和处理两种情况，即情况1和情况2.
+	 * 3. 如果t在范围的左边，由于我们应该把t往右移，直到它变回到边界返回内，
+	 *  {@code if(t.data < upper) { printRanger(lower, upper, t.right)}},即该句的精妙在于它完美地包含和处理两种情况，即情况1和情况3.
+	 *  
+	 *  妙实在是妙！
+	 * @param tree
+	 * @param k1
+	 * @param k2
+	 */
+	public void printRange(AnyType lower, AnyType upper, BinaryNode<AnyType> t ) {
+		if(t == null) {
+			return;
+		}
+		
+		if(lower.compareTo(t.data) < 0)  {
+			printRange(lower, upper, t.left);
+		}
+		
+		if(lower.compareTo(t.data) <= 0 && t.data.compareTo(upper) <= 0) {
+			System.out.println(t.data);
+		}
+		
+		if(t.data.compareTo(upper) < 0) {
+			printRange(lower, upper, t.right);
+		}
+	}
+	
 }

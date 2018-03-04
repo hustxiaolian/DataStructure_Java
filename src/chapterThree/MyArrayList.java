@@ -11,6 +11,8 @@ import java.util.ListIterator;
  * 目前认为可以改进的地方是对于如果当前数组的使用率过低，我们可以适当的反向扩展数组。
  * 有点像散列表中根据填充因子进行再散列一样。
  * 
+ * 下次review就是好好研究下Iterator和ListIterator
+ * 
  * @author 25040
  *
  * @param <AnyType>

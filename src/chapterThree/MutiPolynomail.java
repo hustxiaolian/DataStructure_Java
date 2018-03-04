@@ -1,5 +1,10 @@
 package chapterThree;
 
+/**
+ * 模拟两个多项式相称的运算。
+ * @author 25040
+ *
+ */
 public class MutiPolynomail {
 
 	public static void main(String[] args) {
@@ -33,16 +38,29 @@ public class MutiPolynomail {
 	
 }
 
-
+/**
+ * 多项式节点类，使用节点类保存多项每项的系数和指数
+ * @author 25040
+ *
+ */
 class PolyNode {
+	/**
+	 * 每个节点的系数和指数属性
+	 */
 	private double coeff;
 	private int exp;
 	
+	/*
+	 * 节点类的有参构造
+	 */
 	public PolyNode(double coeff,int exp) {
 		this.coeff = coeff;
 		this.exp = exp;
 	}
 	
+	/*
+	 * 属性的get和set方法
+	 */
 	public double getCoeff() {
 		return coeff;
 	}
@@ -56,6 +74,12 @@ class PolyNode {
 		this.exp = exp;
 	}
 	
+	/**
+	 * 两项相加的运算。按照数学运算规则，只有两项指数相同的时才加（合并）
+	 * 
+	 * @param other
+	 * @return
+	 */
 	public PolyNode add(PolyNode other) {
 		if(this.getExp() != other.getExp()) {
 			throw new IllegalArgumentException("指数相同的两项才能相加");
@@ -63,10 +87,18 @@ class PolyNode {
 		return new PolyNode(this.coeff+other.coeff,this.exp);
 	}
 	
+	/**
+	 * 任意两项节点的乘法运算。系数相乘，指数相加。
+	 * @param other
+	 * @return
+	 */
 	public PolyNode muti(PolyNode other) {
 		return new PolyNode(this.getCoeff() * other.getCoeff(),this.getExp() + other.getExp());
 	}
 	
+	/**
+	 * hashcode和equal，这里只使用了指数作为散列计算和相等判断的条件。
+	 */
 	@Override
 	public int hashCode() {
 		final int prime = 31;

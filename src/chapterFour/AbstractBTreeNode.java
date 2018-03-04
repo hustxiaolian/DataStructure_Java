@@ -5,6 +5,7 @@ import java.util.Queue;
 
 /**
  * Abstract Node.
+ * 抽象的节点类，定义一些无论是树叶抑或是节点都通用的方法
  * @author 25040
  *
  * @param <K>

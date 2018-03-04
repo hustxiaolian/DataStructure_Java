@@ -184,19 +184,43 @@ public class MyArrayList<AnyType> implements Iterable<AnyType>{
 	}
 	
 	/**
+	 * 传入元素，根据数组依次比对所有元素，找到相等的返回旧值，没找到该元素则返回null。
+	 * 最坏时间界限为：O(N)，线性。
+	 * @param x
+	 * @return
+	 */
+	public AnyType remove(AnyType x) {
+		int i;
+		for(i = 0;i < size();++i) {
+			//如果找到了,退出循环
+			if(x.equals(this.theItems[i])) {
+				break;
+			}
+		}
+		
+		if(i != size()) {
+			//说明了找到了欲删除的元素,把该元素暂存返回，在它之后的元素，集体前移一位
+			return remove(i);
+		}
+		else {
+			return null;
+		}
+		
+	}
+	
+	/**
 	 * 集合类的容量再分配函数，核心函数之一。
 	 * 思路很简单清晰，就是按照新的容量重新申请数组，把原来旧数组的元素拷贝到新数组中
 	 * @param newCapacity
 	 */
 	@SuppressWarnings("unchecked")
 	public void ensureCapacity(int newCapacity) {
-		/*
 		if(newCapacity < this.theSize) {
 			return;
 		}
-		*/
 		AnyType[] old = this.theItems;
 		this.theItems = (AnyType[])new Object[newCapacity];
+		
 		for(int i = 0;i < this.theSize;++i) {
 			this.theItems[i] = old[i];
 		}

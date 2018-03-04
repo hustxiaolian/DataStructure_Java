@@ -20,7 +20,7 @@ public class MyArrayQueue<T> {
 	}
 	
 	public boolean isFull() {
-		return currentSize == this.theItems.length;
+		return currentSize == this.theItems.length - 1;
 	}
 	
 	public int size() {
@@ -34,12 +34,14 @@ public class MyArrayQueue<T> {
 	public void enqueue(T x) {
 		if(isFull())
 			throw new IndexOutOfBoundsException("队列空间已经用完，元素(" + x + ")无法入队");
+		++this.currentSize;
 		this.theItems[++back % theItems.length] = x;
 	}
 	
 	public T dequeue() {
 		if(isEmpty())
 			throw new IndexOutOfBoundsException("队列为空，没有元素可以出队");
+		--this.currentSize;
 		return this.theItems[front++ % theItems.length];
 	}
 }

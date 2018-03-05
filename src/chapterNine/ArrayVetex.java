@@ -1,336 +1,320 @@
 package chapterNine;
 
-import chapterThree.MyArrayList;
-import chapterThree.MyArrayQueue;
+import chapterThree.MyLinkedList;
 
 /**
+ * 
+ * 这次图邻接表表示法采用MyArrayList提到的改进型想法
+ * 
+ * 总结来说这次数据结构的基本原来如下：
+ * 1.取消节点类，不通过节点来保存对象。而是利于每个节点拓扑编号就是对应的索引值。临界点的数据只存储临界点的拓扑编号以及对应的索引值
+ * 2.不再使用MyArrayList集合类来组织数据，太麻烦了，而且有点浪费空间。直接使用数组来组织。
+ * 	有个问题是，图的扩展性受到限制，即一旦图被构造，难以被修改或者说修改的代价很大。
+ * 	好处是，编程简单直接。
+ * 
+ * 使用这种方式构造一个图出来，限制是在图的构造阶段，也就是调用它的构造函数过程中必须全部把顶点载入，后续建立连接的时候不允许出现新的顶点
+ * 
+ * 最近的改进型想法：
+ * 1. 使用hashMap和LinkedList来存储邻接表，进一步提高性能。
+ * 
  * @author 25040
- * 
- * @version 1.0
- * 使用MyArrayList实现邻接表，完成书中的拓扑排序,真吉儿麻烦。算了，就当是顺带测试了自己写的两个集合类。
- * 
  *
- * @version 2.0
- * 改进想法：
- * 哇这尼玛写的，异常麻烦，而且忽略事实：
- * 1. 完全不需要使用ArrayList，因此比如有n个顶点，那么每个邻接表self + 邻接顶点的个数最多为n个。
- *		因此不需要使用ArrayList的自动伸展扩孔的属性。
- * 2. 简洁点，邻接表类只有以下几个属性：当前节点的入度，当前节点的内容，保存邻接顶点的数组索引。
- *		也就是数组下标值来直接反映不同的顶底。
+ * @param <T>
  */
 public class ArrayVetex<T> {
 	
 	public static void main(String[] args) {
-		String[] nodeArray = new String[] {"v1","v2","v3","v4","v5","v6","v7"};
-		ArrayVetex<String> graph = new ArrayVetex<>(nodeArray);
+		ArrayVetex<String> graph = new ArrayVetex<>(new String[] {"v1","v2","v3","v4","v5","v6","v7"});
 		
-		graph.builtConnection("v1", new String[] {"v2","v3","v4"});
-		graph.builtConnection("v2", new String[] {"v4","v5"});
-		graph.builtConnection("v3", new String[] {"v6"});
-		graph.builtConnection("v4", new String[] {"v3","v6","v7"});
-		graph.builtConnection("v5", new String[] {"v4","v7"});
-		graph.builtConnection("v6", new String[] {});
-		graph.builtConnection("v7", new String[] {"v6"});
+		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v1", new String[] {"v2", "v4"});
+		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v2", new String[] {"v4", "v5"});
+		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v3", new String[] {"v1", "v6"});
+		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v4", new String[] {"v3", "v5", "v6", "v7"});
+		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v5", new String[] {"v7"});
+		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v6", new String[] {});
+		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v7", new String[] {"v6"});
 		
-		graph.printVetexList();
-		
-		
-		try {
-			graph.topsortByQueue();;
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		graph.printGraph();
 	}
 	
 	/*
-	 * 以ArrayLisy存储邻接表
+	 * 属性。存储邻接表数组
 	 */
-	private MyArrayList<Vetex<T>> vetexList;
+	private OneWeightedAdjacencyList<T>[] adjecenyLists;
+	
 	
 	/**
-	 * 有参构造，根据数组来初始化顶点邻接表。
-	 * @param arr
-	 */
-	public ArrayVetex(T[] arr) {
-		this.vetexList = new MyArrayList<>();
-		for (int i = 0; i < arr.length; i++) {
-			Node<T> newNode = new Node<T>(arr[i]);
-			this.vetexList.add(new Vetex<>(newNode));
-		}
-	}
-	
-	/**
-	 * 建立顶点之间的邻接关系。
+	 * 使用所有的顶点关键字构造所有的邻接表。
+	 * 图在构造的过程中，不会查重，哪怕两个顶点的关键字相同 ，也是两个不同的顶点。
+	 * 顶点不同的唯一依据是其数组索引值。
+	 * 切记不能传入重复的元素，否则要出逻辑错误。
 	 * 
-	 * @param self 当前顶点的内容
-	 * @param others 其他邻接的顶点的内容
+	 * 注意点：
+	 * 1.this.adjecenyLists =  new OneWeightedAdjacencyList[allVetexElements.length];
+	 * 而不能使this.adjecenyLists =  (OneWeightedAdjacencyList<T>[])new Object[allVetexElements.length];
+	 * 抛出java.lang.ClassCastException
+	 * 
+	 * @param AllVetexElements 所有的顶点关键字
 	 */
-	public void builtConnection(T self, T[] others) {
-		Vetex<T> whichVetex = findWhichVetexAndNotExsitAddNewNode(self);
-		
-		for(int i = 0;i < others.length;++i) {
-			Node<T> otherOneNode = findWhichVetexAndNotExsitAddNewNode(others[i]).self;
-			whichVetex.addAdjcacencyNode(otherOneNode);
-		}
-		
-	}
-	
-	/**
-	 * 根据邻接表self顶点的内容来确定在哪个邻接表，
-	 * 如果该顶点还不存在就是创建新的顶点对象以及创建该顶点对象的邻接表。
-	 * 时间界限为线性。因此getVetexBySelfElement函数为线性。
-	 * @param self 顶点的内容
-	 * @return self对象对应的邻接表对象的引用
-	 */
-	private Vetex<T> findWhichVetexAndNotExsitAddNewNode(T self) {
-		Vetex<T> whichVetex = getVetexBySelfElement(self);
-		if(whichVetex == null) {
-			Node<T> newNode = new Node<T>(self);
-			this.vetexList.add(new Vetex<>(newNode));
-			return this.vetexList.get(this.vetexList.size() - 1);
-		}
-		else {
-			return whichVetex;
+	@SuppressWarnings("unchecked")
+	public ArrayVetex(T[] allVetexElements) {
+		//
+		this.adjecenyLists =  new OneWeightedAdjacencyList[allVetexElements.length];
+		//变量顶点关键字数组，依次构建对应的邻接表
+		for(int i = 0;i < allVetexElements.length; ++i) {
+			//查重，防止两个点拥有两个相同的关键字。可以考虑使用map来构建
+			//getIndexByVetexElement(allVetexElements[i], 0, i - 1);
+			//每个顶点构建一个邻接表
+			this.adjecenyLists[i] = new OneWeightedAdjacencyList<>(allVetexElements[i]);
 		}
 	}
 	
 	/**
-	 * 根据数组下标索引值返回邻接表的引用,常数操作
-	 * @param idx
+	 * 在两个顶点之间建立一条有权值的边。
+	 * 由于需要扫描数组以获得下标，所以扫描需要最坏需要V（顶点个数）次。该方法最坏需要2 * V次，线性。
+	 * @param selfVetexElement (u,v)点对的u，即边的起始
+	 * @param otherVetexElement (u,v)点对的v，即边的终止
+	 * @param weight (u,v)边的权值
+	 */
+	public void builtWeightedEdgeWithOneVetexAndOtherOneVetex(T selfVetexElement, T otherVetexElement, int weight ) {
+		OneWeightedAdjacencyList<T> whichVetex = this.adjecenyLists[getIndexByVetexElement(selfVetexElement)];
+		whichVetex.builtEdgeWithOtherVetex(getIndexByVetexElement(otherVetexElement), weight);
+	}
+	
+	/**
+	 * 在两个顶点之间建立一条权值为1的边。线性
+	 * @param selfVetexElement
+	 * @param otherVetexElement
+	 */
+	public void builtEdgeWithOneVetexAndOtherOneVetex(T selfVetexElement, T otherVetexElement) {
+		builtWeightedEdgeWithOneVetexAndOtherOneVetex(selfVetexElement, otherVetexElement, 1);
+	}
+	
+	/**
+	 * 使用一个顶点和其他多个顶点建立无权值的边。时间界限为V的二次方
+	 * @param selfVetexElement 多条有向边的起点	
+	 * @param otherVetexElements 其他顶点，即多条有向边的终点构成的数组
+	 */
+	public void builtEdgeWithOneVetexAndSomeOtherVetex(T selfVetexElement, T[] otherVetexElements) {
+		OneWeightedAdjacencyList<T> whichVetex = this.adjecenyLists[getIndexByVetexElement(selfVetexElement)];
+		
+		for(int i = 0; i < otherVetexElements.length; ++i) {
+			whichVetex.builtEdgeWithOtherVetex(getIndexByVetexElement(otherVetexElements[i]), 1);
+		}
+	}
+	
+	/**
+	 * 返回图中顶点的个数
 	 * @return
 	 */
-	private Vetex<T> getVetexByIndex(int idx) {
-		return this.vetexList.get(idx);
+	public int size() {
+		return this.adjecenyLists.length;
 	}
 	
 	/**
-	 * 根据邻接表顶点的内容，遍历邻接表数组，寻找邻接表self顶点的内容符合要求的那个邻接表引用。
+	 * 在全部顶点数组范围内依次比对所有顶点的关键字，返回顶点的数组索引（或者叫下标，或者说拓扑编号）.
+	 * 不存在则抛出异常。
+	 * @param vetexElement
+	 * @return
+	 */
+	public int getIndexByVetexElement(T vetexElement) {
+		return getIndexByVetexElement(vetexElement, 0, size() - 1);
+	}
+	
+	/**
+	 * 遍历一定范围内邻接表数组，依次比对所有顶点的关键字，返回顶点的数组索引（或者叫下标，或者说拓扑编号）.
+	 * 如果不存在则返回-1；
+	 * 
+	 * 同时，它还进行了查重。其实可以考虑使用map
+	 * 
 	 * 时间界限为线性。
-	 * @param nodeElement
-	 * @return
+	 * 
+	 * @param vetexElement
 	 */
-	private Vetex<T> getVetexBySelfElement(T nodeElement){
-		int i;
-		//遍历搜索self的内容属性为nodeElement的邻接表
-		for(i = 0;i < this.vetexList.size();++i) {
-			//判断两者是否相等
-			if(getVetexByIndex(i).getSelfNodeElement().equals(nodeElement))
+	private int getIndexByVetexElement(T vetexElement, int leftBorder, int rightBorder) {
+		int index;
+		
+		for(index = leftBorder;index <= rightBorder ;++index) {
+			if(this.adjecenyLists[index].getVetexElement().equals(vetexElement)) {
 				break;
+			}
 		}
 		
-		if(i != this.vetexList.size()) {
-			return getVetexByIndex(i);
+		if(index == rightBorder + 1) {
+			throw new IllegalArgumentException("该图所有顶点中不存在该顶点");
 		}
 		else {
-			return null;
+			return index;
 		}
 	}
 	
 	/**
-	 * 拓扑排序，想要说明的是，顶点之间必须要找的顺序，而不是列举图所有的路径可能性。
-	 * 这一点我开始有点误解了，而且到现在我也认为我的代码数据结构没有组织好。
-	 * 
-	 * 这里勉强是弄懂了。这里是针对有向无圈图求它的拓扑顺序。
-	 * 1. 首先，我们需要求解的时拓扑顺序，因此，循环的次数我们时已知的。即数组的size；
-	 * 2. 我们通过findNewVertexOfIndegreeZeroAndReturnIndex函数得到当前入度为0的顶点的邻接表下标；
-	 * 3. 然后该顶点其下（邻接）的所有的顶点的入度-1；
-	 * 4. 删除该邻接表。
-	 * 5. 依次删除的顺序就是拓扑顺序。
-	 * 
-	 * 分析时间界限：
-	 * 1. findNewVertexOfIndegreeZeroAndReturnIndex-线性
-	 * 2. MyArrayList.remove——线性
-	 * 3. 内层for——线性
-	 * 因此，总的为顶点数的二次方
-	 * 
-	 * @throws Exception 当该图不是有向无圈图时抛出异常
+	 * 图邻接表的格式化输出。
 	 */
-	public void topsort() throws Exception {
-		StringBuffer sb = new StringBuffer();
-		sb.append("拓扑顺序：");
-		int num_vetex = this.vetexList.size();
-		
-		for(int i = 0; i < num_vetex;++i) {
-			int v = findNewVertexOfIndegreeZeroAndReturnIndex();
-			
-			if(v < 0) {
-				throw new Exception("该图有圈！");
-			}
-			
-			sb.append(getVetexByIndex(v).self.element).append("->");
-			//所有与当前点相连的点的入度都-1
-			for(int j = 0;j < getVetexByIndex(v).adjacencyList.size();++j) {
-				getVetexByIndex(v).adjacencyList.get(j).indegree--;
-			}
-			//还有删除当前节点
-			this.vetexList.remove(v);
+	public void printGraph() {
+		for (OneWeightedAdjacencyList<T> oneWeightedAdjacencyList : adjecenyLists) {
+			System.out.println(oneWeightedAdjacencyList);
 		}
-		
-		System.out.println(sb.toString());
 	}
 	
 	/**
-	 * 使用数组队列来优化时间界限。优化来自于每条边都只被计算了一次。
-	 * @throws Exception 
+	 * @since 2018-3-5 
+	 * 有向无圈图的最短路径计算.
+	 * 估计得使用方法内部类来计算最短路径。
+	 * 妈的，有点懵逼。
+	 * @param startVetex 起点对应的拓扑编号
 	 */
-	public void topsortByQueue() throws Exception {
-		int counter = 0;
-		StringBuffer sb = new StringBuffer();
-		sb.append("拓扑顺序：");
-		MyArrayQueue<Vetex<T>> queue = new MyArrayQueue<>(10);
+	public void breadthFirstSearch(T startVetex) {
+		table[] nodeTable = new table[size()];
 		
-		/*
-		 * 对每个邻接表进行扫描，耗费V（顶点数）次
-		 */
-		for (int i = 0;i < this.vetexList.size();++i) {
-			if(getVetexByIndex(i).self.indegree == 0) {
-				queue.enqueue(getVetexByIndex(i));
-			}
+		for(int i = 0;i < nodeTable.length; ++i) {
+			nodeTable[i] = new table(i, false, Integer.MAX_VALUE, 0);
 		}
 		
-		/*
-		 * 入度实际上为指向该顶点边的数目，虽然这里有for嵌套while，
-		 * 但是我们深入到if语句判断可知，该段程序实际上只是对每条边计算了一次，也就是
-		 * 每个入度执行了-1操作，直到入度为0.
-		 * 因此，该段程序的时间界限为E（边数）
-		 */
-		while(!queue.isEmpty()) {
-			Vetex<T> v = queue.dequeue();
-			
-			sb.append(v.self.element).append("->");
-			
-			for(int i = 0;i < v.adjacencyList.size();++i) {
-				if(--v.adjacencyList.get(i).indegree == 0) {
-					//如果某个顶点的入度为0了就进队
-					queue.enqueue(getVetexByIndex(v.adjacencyList.get(i).topNum));
+		nodeTable[getIndexByVetexElement(startVetex)].dv = 0; 
+		
+		for(int currDist = 0;currDist < size();++currDist) {
+			for (table vetex : nodeTable) {
+				if( !vetex.known && vetex.dv == currDist) {
+					vetex.known = true;
+					for(chapterNine.ArrayVetex.OneWeightedAdjacencyList.Edge edge : this.adjecenyLists[vetex.VetexNum].getAdjacencyEdges()) {
+						table adjecenyVetex = nodeTable[edge.adjacencyVetex];
+						if(adjecenyVetex.dv == Integer.MAX_VALUE) {
+							adjecenyVetex.dv = currDist + 1;
+							adjecenyVetex.pv = vetex.VetexNum;
+						}
+					}
 				}
 			}
-			//用于判断图是否有圈
-			++counter;
-		}
-		System.out.println(sb.toString());
-		
-		if(counter != this.vetexList.size()) {
-			throw new Exception("该图有圈，拓扑排序必须是有向无圈图！");
-		}
-		
+		}	
 	}
 	
 	/**
-	 * 找到入度为0的邻接表的下标，没找到则返回-1
-	 * @return
+	 * 使用队列来提高上述代码的运行效率。
+	 * @param startVetex 起点
 	 */
-	private int findNewVertexOfIndegreeZeroAndReturnIndex(){
-		for(int i = 0;i < this.vetexList.size();++i) {
-			if(getVetexByIndex(i).self.indegree == 0) {
-				return i;
-			}
-		}
+	public void breadthFirstSearchByQueue(T startVetex) {
 		
-		return -1;
 	}
 	
 	/**
-	 * 打印整个邻接表
-	 */
-	public void printVetexList() {
-		//遍历邻接表数组
-		for(int i = 0; i < this.vetexList.size(); ++i) {
-			//对每一个邻接表先打印自己
-			System.out.println(this.vetexList.get(i));
-		}
-	}
-	
-	/**
-	 * 顶点邻接表类，需要存储当前的顶点对象以及邻接的顶点链表对象
-	 * （这里为了方便分析使用自己写的MyArrayLIstanbul，顺便也可以检验自己写的集合类）
+	 * 用于计算最短路径得表
 	 * 
-	 * 
-	 * 使用List来存储当前点相邻
 	 * @author 25040
 	 *
 	 */
-	private static class Vetex<T>{
-		private Node<T> self;
-		private MyArrayList<Node<T>> adjacencyList;
+	private static class table{
+		int VetexNum; //顶点的编号
+		boolean known = false;//在广度优先搜索的过程是否已经被找到的标志
+		int dv = Integer.MAX_VALUE;//记录起点到该点的路径长
+		int pv;//
 		
-		public Vetex(Node<T> self) {
-			this.self = self;
-			this.adjacencyList = new MyArrayList<>();
+		public table(int vetexNum, boolean known, int dv, int pv) {
+			super();
+			VetexNum = vetexNum;
+			this.known = known;
+			this.dv = dv;
+			this.pv = pv;
+		}
+	}
+	
+	/**
+	 * 邻接表对象。
+	 * 
+	 * @author 25040
+	 *
+	 * @param <T>
+	 */
+	private static class OneWeightedAdjacencyList<T> {
+		
+		private static int VETEX_COUNTER = 0;
+		private int topNum;
+		private T element;
+		private MyLinkedList<Edge> adjacencyEdges;
+		
+		public OneWeightedAdjacencyList(T elements) {
+			this.topNum = VETEX_COUNTER++;
+			this.element = elements;
+			this.adjacencyEdges = new MyLinkedList<>();
+		}
+		
+		public T getVetexElement() {
+			return element;
+		}
+		
+		
+		public MyLinkedList<Edge> getAdjacencyEdges() {
+			return adjacencyEdges;
 		}
 
 		/**
-		 * 向邻接表中插入新的相邻顶点,直接使用ArrayList的add方法。
-		 * 并且将当前顶点的入度 + 1。
-		 * 由于内存中实际上就应该存在n个实际的节点对象（我们邻接表中存储的都是引用）。
-		 * 时间界限为常数
+		 * 建立当前顶点和其他顶点的边，并且赋权值。
+		 * 时间界限为：常数
+		 * 
+		 * @param otherVetexIndex
+		 * @param edgeWeight
 		 */
-		public void addAdjcacencyNode(Node<T> newAdjcacencyNode) {
-			this.adjacencyList.add(newAdjcacencyNode);
-			newAdjcacencyNode.indegree++;
+		public void builtEdgeWithOtherVetex(int otherVetexIndex, int edgeWeight) {
+			this.adjacencyEdges.add(new Edge(otherVetexIndex, edgeWeight));
 		}
 		
 		/**
-		 * 返回当前链接表的self顶点的内容
-		 * @return
-		 */
-		public T getSelfNodeElement() {
-			return this.self.element;
-		}
-		
-		/**
-		 * 格式化输出邻接表
+		 * 邻接表的格式化输出。
+		 * @return 格式化字符串
 		 */
 		public String toString() {
 			StringBuffer sb = new StringBuffer();
 			sb.append("[");
-			sb.append("self:").append(self);
-			for(int i = 0;i < this.adjacencyList.size();++i) {
-				sb.append("->").append(this.adjacencyList.get(i));
+			
+			sb.append(this.topNum).append("-> ");
+			for (Edge edge : adjacencyEdges) {
+				sb.append(edge.adjacencyVetex).append(", ");
+				//sb.append("(权:").append(edge.getWeight()).append(")").append("->");
 			}
+			
 			sb.append("]");
-			
 			return sb.toString();
-		}
-	}
-	
-	/**
-	 * 顶点类，为了计算拓扑顺序，我们根据书上的提示得知，每个顶点就拥有三个属性：
-	 * 1. 顶点自身的关键字。
-	 * 2. 入度。我们把顶点v的入度定义为边(u,v)的条数。
-	 * 
-	 * @author 25040
-	 *
-	 */
+		} 
+		
+		/**
+		 * 边对象，具体表现为一个带有箭头的边。
+		 * 包含两个属性，箭头指向顶点的索引（数组下标，顶点对象其实内化与邻接表对象中，其编号就是其对应的下标，
+		 * 邻接表对象的element属性相当于顶点的内容）
+		 * 
+		 * @author 25040
+		 *
+		 */
+		private static class Edge {
+			//临界点编号或者说数组索引
+			private int adjacencyVetex;
+			//该边的权
+			private int weight;
+			
+			/**
+			 * 边的构造函数，输入箭头指向的那个顶点，以及权值，必须和邻接表对象混合使用
+			 * @param adjacencyVetex
+			 * @param weight
+			 */
+			public Edge(int adjacencyVetex, int weight) {
+				this.adjacencyVetex = adjacencyVetex;
+				this.weight = weight;
+			}
 
-	private static class Node<T>{
-		private static int topNumCnt = 0;
-		
-		private int topNum;
-		private T element;
-		private int indegree;
-		
-		public Node(T element) {
-			this.topNum = topNumCnt++;
-			this.element = element;
-			this.indegree = 0;
-		}
-		
-		public String toString() {
-			StringBuffer sb = new StringBuffer();
-			sb.append("(");
-			
-			sb.append("id:").append(topNum).append(",");
-			sb.append("element:").append(element).append(",");
-			sb.append("indegree:").append(indegree);
-			
-			sb.append(")");
-			
-			return sb.toString();
-		}
+			public int getAdjacencyVetex() {
+				return adjacencyVetex;
+			}
 
-		
+			public void setAdjacencyVetex(int adjacencyVetex) {
+				this.adjacencyVetex = adjacencyVetex;
+			}
+
+			public int getWeight() {
+				return weight;
+			}
+
+			public void setWeight(int weight) {
+				this.weight = weight;
+			}
+		}
 	}
 }
-

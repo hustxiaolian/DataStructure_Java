@@ -117,8 +117,8 @@ public class MyLinkedList<AnyType> implements Iterable<AnyType> {
 		return true;
 	}
 	
-	public void add(int idx,AnyType x) {
-		addBefore(getNode(idx,0,size()),x);
+	public void add(int idx, AnyType x) {
+		addBefore(getNode(idx, 0, size()),x);
 	}
 	
 	public AnyType get(int idx) {
@@ -161,7 +161,7 @@ public class MyLinkedList<AnyType> implements Iterable<AnyType> {
 	}
 	
 	private Node<AnyType> getNode(int idx){
-		return getNode(idx,0,size() - 1);
+		return getNode(idx, 0, size() - 1);
 	}
 	
 	private Node<AnyType> getNode(AnyType data){

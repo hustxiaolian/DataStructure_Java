@@ -4,35 +4,35 @@ public final class Sort {
 	
 	
 	/**
+	 * @since 2018-3-5 第一次review
+	 * 
 	 * 按照从小到大的顺序进行插入排序
-	 * 插入排序基于，在数组位置0-i的子数组已经完成排序，因此位置i+1的元素只需要依次向前比对，插入到前面子数组合适的位置即可
+	 * 插入排序基于，在数组位置0-i的子数组已经完成排序，因此位置i+1的元素只需要依次向前比对，插入到前面子数组合适的位置即可。
+	 * 按照此规律迭代到数组最后一个元素即可。
 	 * 时间界限为O（N^2）
 	 * 实际测试：十万级：20000ms
+	 * 
 	 * @param arr 需要排序的数组
 	 */
 	public static <AnyType extends Comparable<? super AnyType>> void insertionSort(AnyType[] arr) {
 		insertionSort(arr, 0, arr.length - 1);
-		/*
-		int insertionPos;
-		
-		for(int nowPos = 1;nowPos < arr.length; ++nowPos) {
-			//记录当前需要向前插入的元素
-			AnyType nowItem = arr[nowPos];
-			
-			//向前比对，寻求插入的合适位置
-			for(insertionPos = nowPos;insertionPos > 0 && 
-					nowItem.compareTo(arr[insertionPos - 1]) < 0;--insertionPos) {
-				
-				arr[insertionPos] =  arr[insertionPos - 1];
-			}
-			//插入
-			arr[insertionPos] = nowItem;
-		}
-		*/
 	}
 	
 	/**
+	 * @since 2018-3-5 review1
 	 * 
+	 * 局部插入排序的例程。将插入排序的作用范围规定在left和right之间。
+	 * 值得注意的是，这里left和right所指向的元素都包括排序数组内。
+	 * 
+	 * 值得注意的点：
+	 * 1. 在编写代码的时候，一定要想清楚，注意边界等方面的细节，不要想当然。
+	 * 2. 在插入排序的循环中，先暂存位置p的元素，然后把位置0-（p-1）中的部分元素后移一位，也就是arr[i] = arr[i-1];
+	 * 		此处的i从位置p到位置1，才能保证不出现数组访问越界异常。最后，找到合适的位置了再把之前的暂存值赋值到相应的位置上。
+	 * 
+	 * 
+	 * @param arr
+	 * @param left
+	 * @param right
 	 */
 	private static <AnyType extends Comparable<? super AnyType>> void insertionSort(AnyType[] arr,int left,int right) {
 		for(int i = left + 1;i <= right;++i) {
@@ -48,10 +48,13 @@ public final class Sort {
 	}
 	
 	/**
+	 * @since 2018-3-5 review1
 	 * 使用希尔增量进行希尔排序
 	 * 希尔排序的的核心在hk排序性在之后的增量排序中保持不变
+	 * hk排序的具体含义为(假设需要将数组从小到大排序)：arr[i + k] >= arr[i]。
+	 * 
 	 * 思路步骤：
-	 * 1. 首先必须有建立，或者外部传入一个增量序列，其第一个值必须为1.
+	 * 1. 首先必须有建立，或者外部传入一个增量序列，其第一个值（也就是最后hk排序的值必须为）必须为1.
 	 * 2. 再按照插入排序的思路，进行hk排序。
 	 * 
 	 * 实际测试：十万级：86ms
@@ -61,10 +64,10 @@ public final class Sort {
 		for(int gap = arr.length / 2 ;gap > 0 ;gap /= 2) {
 			int j;
 			
-			//有了希尔增量后，之后的思路和插入排序类型
+			//有了希尔增量后，之后的思路和插入排序类似
 			for(int i = gap;i < arr.length; ++i) {
 				AnyType nowItem = arr[i];
-				
+				//注意此处j的递减变化不是-1了，而是-gap
 				for(j = i; j - gap >= 0 && nowItem.compareTo(arr[j - gap]) < 0; j -= gap) {
 					arr[j] = arr[j - gap];
 				}
@@ -75,7 +78,16 @@ public final class Sort {
 	}
 	
 	/**
-	 * 堆排序
+	 * @since 2018-3-5 review1
+	 * 
+	 * 1.经过debug测试，发现了一个智障错误：第一次for的终止条件应该是>0而不是>=0.
+	 * 忘记了二叉堆是从数组位置1开始的。当hole = 0进行下滤，child也为0，死循环。
+	 * 
+	 * 2.再然后发现，我还忽略了二叉堆结构的重要性质，还是同样的问题，必须从索引1开始。
+	 * 为满足堆序性和结构性，必须先把所有的元素后移一位，使得第一位有效元素从位置1开始。
+	 * 或者跟书上那样，把所有的索引调整下。我试下,还是没调通，晕死，下午再看看，现在脑子有点僵硬。
+	 * 
+	 * 堆排序，还未调通，线程一直没有结束，估计是陷入了死循环。经过上面的修改测试通过
 	 * 思路：
 	 * 1. 首先使用传入的数组进行下滤操作，建立最大（最小）二叉堆。
 	 * 2. 使用二叉堆的deleteMin操作（这个操作中包含又一次的下滤操作），进行多次，并且把返回值放入二叉堆使用数组的后面，节省空间。
@@ -104,22 +116,21 @@ public final class Sort {
 		int i,child;
 		AnyType percDownItem = arr[hole];
 		
-		for(i = hole; i * 2 < heapLength;i = child) {
-			child = i * 2;
-			//寻找儿子中更小的
-			if(child + 1 < arr.length && arr[child + 1].compareTo(arr[child]) < 0) {
+		for(i = hole; i * 2 + 1 < heapLength;i = child) {
+			child = i * 2 + 1;
+			//寻找儿子中更大的，以建立最大二叉堆
+			if(child + 1 < arr.length && arr[child + 1].compareTo(arr[child]) > 0) {
 				++child;
 			}
 			//看当前的hole是否满足堆序性要求
 			if(percDownItem.compareTo(arr[child]) < 0) {
-				break;
+				arr[i] = arr[child];
 			}
 			//否则将hole继续沿着儿子路径下滤
 			else {
-				arr[i] = arr[child];
+				break;
 			}
 		}
-		
 		arr[i] = percDownItem;
 	}
 	
@@ -288,7 +299,7 @@ public final class Sort {
 			}
 			//把枢纽元交换会正确的位置
 			arraySwap(arr, i, right - 1);
-			
+			//递归地对两个分割的集合进行快排
 			quickSort(arr, left, i - 1);
 			quickSort(arr, i + 1, right);
 		}

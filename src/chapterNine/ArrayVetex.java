@@ -1,15 +1,22 @@
 package chapterNine;
 
-import java.awt.geom.Dimension2D;
-
-import chapterFour.ExtendingTree;
 import chapterThree.MyArrayList;
 import chapterThree.MyArrayQueue;
 
 /**
- * 使用数组实现邻接表，完成书中的拓扑排序
  * @author 25040
+ * 
+ * @version 1.0
+ * 使用MyArrayList实现邻接表，完成书中的拓扑排序,真吉儿麻烦。算了，就当是顺带测试了自己写的两个集合类。
+ * 
  *
+ * @version 2.0
+ * 改进想法：
+ * 哇这尼玛写的，异常麻烦，而且忽略事实：
+ * 1. 完全不需要使用ArrayList，因此比如有n个顶点，那么每个邻接表self + 邻接顶点的个数最多为n个。
+ *		因此不需要使用ArrayList的自动伸展扩孔的属性。
+ * 2. 简洁点，邻接表类只有以下几个属性：当前节点的入度，当前节点的内容，保存邻接顶点的数组索引。
+ *		也就是数组下标值来直接反映不同的顶底。
  */
 public class ArrayVetex<T> {
 	

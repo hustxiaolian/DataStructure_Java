@@ -1,5 +1,6 @@
 package chapterNine;
 
+import chapterThree.MyArrayQueue;
 import chapterThree.MyLinkedList;
 
 /**
@@ -35,13 +36,19 @@ public class ArrayVetex<T> {
 		graph.builtEdgeWithOneVetexAndSomeOtherVetex("v7", new String[] {"v6"});
 		
 		graph.printGraph();
+		
+		System.out.println("----------------------------------");
+		
+		graph.printBreadthFirstSearchPath("v3");
+		
 	}
 	
 	/*
 	 * 属性。存储邻接表数组
+	 * 以及广度优先搜索的结果
 	 */
 	private OneWeightedAdjacencyList<T>[] adjecenyLists;
-	
+	private table[] breadthFirstSearchResult;
 	
 	/**
 	 * 使用所有的顶点关键字构造所有的邻接表。
@@ -72,6 +79,7 @@ public class ArrayVetex<T> {
 	/**
 	 * 在两个顶点之间建立一条有权值的边。
 	 * 由于需要扫描数组以获得下标，所以扫描需要最坏需要V（顶点个数）次。该方法最坏需要2 * V次，线性。
+	 * 
 	 * @param selfVetexElement (u,v)点对的u，即边的起始
 	 * @param otherVetexElement (u,v)点对的v，即边的终止
 	 * @param weight (u,v)边的权值
@@ -83,6 +91,7 @@ public class ArrayVetex<T> {
 	
 	/**
 	 * 在两个顶点之间建立一条权值为1的边。线性
+	 * 
 	 * @param selfVetexElement
 	 * @param otherVetexElement
 	 */
@@ -148,6 +157,11 @@ public class ArrayVetex<T> {
 		}
 	}
 	
+	
+	public T getVetexElementByIndex(int vetexNum) {
+		return this.adjecenyLists[vetexNum].getVetexElement();
+	}
+	
 	/**
 	 * 图邻接表的格式化输出。
 	 */
@@ -162,6 +176,24 @@ public class ArrayVetex<T> {
 	 * 有向无圈图的最短路径计算.
 	 * 估计得使用方法内部类来计算最短路径。
 	 * 妈的，有点懵逼。
+	 * @since 2018-3-6
+	 * 来，今天我就跟你好好较量下，理解完你之后，我再去干红黑树。
+	 * 先理解下书上的基本思路。
+	 * 1.我先定义一个外层for循环，定义一个临时路径长度，用来迭代遍历距离为0-最远距离的所有顶点。for循环的终止条件，我们可以设置为
+	 * 		一个图的可能出现的最大路径长就是顶点的个数，这时候图的样式就是个链表。
+	 * 2.判断当前距离下有哪些还没有置位known为true的顶点，对这些顶点for遍历它的邻接点，把这些临界点的距离属性改为
+	 * 		当前currDist + 1的值，然后将每个邻接点的属性pv 改为 当前顶点的拓扑编号。
+	 * 
+	 * 由此，我们可以以广度优先搜索的方式遍历所有的距离的点。该算法的时间界限为V的二次方。相当低效。
+	 * 主要原因处在，后面很多次外层循环的根本没有必要。但是为了能够处理最差的情况，又必须这样写。
+	 * 在一般情况下，明明所有的顶点的known属性都是true，但是还是要进行循环检索判断。
+	 * 
+	 * 自己zz的改进想法；（当然还是使用队列好点）
+	 * 除了使用队列外，我还有一个大胆的想法。使用一个计数器，也可以解决这个问题。起码能降低外层循环的次数。
+	 * 但是如果图是链表那样的最坏情形，就还是没有丝毫改进。
+	 * 
+	 * 
+	 * 行，理解了广度优先搜索的性质，再来考虑下，怎么显示出实际路径。书中是说通过pv变量的回溯即可。
 	 * @param startVetex 起点对应的拓扑编号
 	 */
 	public void breadthFirstSearch(T startVetex) {
@@ -172,29 +204,108 @@ public class ArrayVetex<T> {
 		}
 		
 		nodeTable[getIndexByVetexElement(startVetex)].dv = 0; 
+		int knownVetex = 1;
 		
+endSearch:		
+		//遍历所有可能出现距离的顶点，即广度优先搜索
 		for(int currDist = 0;currDist < size();++currDist) {
+			//遍历每个顶点，
 			for (table vetex : nodeTable) {
+				//检索判断所有的顶点的known属性是否是未知的和dv属性是当前检索的路径长
 				if( !vetex.known && vetex.dv == currDist) {
+					//置位当前顶点的known
 					vetex.known = true;
+					//遍历当前顶点的所有邻接点（也就是我这里的所有的边对象）
 					for(chapterNine.ArrayVetex.OneWeightedAdjacencyList.Edge edge : this.adjecenyLists[vetex.VetexNum].getAdjacencyEdges()) {
 						table adjecenyVetex = nodeTable[edge.adjacencyVetex];
+						//判断当前顶点的邻接点没有被搜索过，置位过路径长，否则可能出现同一顶点经过两条路径。
 						if(adjecenyVetex.dv == Integer.MAX_VALUE) {
+							//邻接点的dv属性为当前距离+1
 							adjecenyVetex.dv = currDist + 1;
+							//薄记变量，这样邻接点可以记住从哪个顶点搜索路径过来的
 							adjecenyVetex.pv = vetex.VetexNum;
+							/*
+							 * 加入计数器的改进部分。必须完全退出最外层for循环，使用带有标签的break;
+							 */
+							if(++knownVetex == size()) {
+								break endSearch;
+							}
 						}
+						
 					}
 				}
 			}
-		}	
+		}
+		//结果保存到类变量中
+		this.breadthFirstSearchResult = nodeTable;
+	}
+	
+	/**
+	 * 计算并且打印深度优先搜索的结果，如果是还未进行搜索，则先进行搜索之后，再打印
+	 * 
+	 * 具体打印出具体的路径算法不复杂，但是有点不好表示，后期看能不能结合B树来打印显示。但是不同得是，这里没有半点排序，关键是那种结构，以及如果合理得打印显示。
+	 * 能不能参考linux系统得tree方法。 
+	 * 
+	 * 这些循环遍历的get方法看得我心累，一个get就是一个线性扫描时间，好伤啊，下次一定使用map来改进。
+	 * 
+	 * @param startVetex
+	 */
+	public void printBreadthFirstSearchPath(T startVetex) {
+		if(this.breadthFirstSearchResult == null) {
+			breadthFirstSearch(startVetex);
+			//breadthFirstSearchByQueue(startVetex);
+		}
+		
+		for (table table : this.breadthFirstSearchResult) {
+			if(getVetexElementByIndex(table.VetexNum).equals(startVetex))
+				System.out.println("|\t" + getVetexElementByIndex(table.VetexNum) 
+				+ "|\t" + table.known + "|\t" + table.dv + "|\t" + 0);
+			System.out.println("|\t" + getVetexElementByIndex(table.VetexNum) 
+			+ "|\t" + table.known + "|\t" + table.dv + "|\t" + getVetexElementByIndex(table.pv));
+		}
+		
+		//计算实际可能的路径
+		//估计得使用queue队列。
 	}
 	
 	/**
 	 * 使用队列来提高上述代码的运行效率。
+	 * 
+	 * 原理：
+	 * 我们一开始只让距离currDist从队尾入队，接着再遍历其邻接点时，让邻接点（即距离为currDist + 1）从队尾入队。
+	 * 所以一定是currDist的所有顶点全部处理完成后，再处理currDist + 1的顶点。即广度优先搜索的方式。
+	 * 
+	 * 该算法避免了第一种算法的多次无用的检测
+	 * 
 	 * @param startVetex 起点
 	 */
 	public void breadthFirstSearchByQueue(T startVetex) {
+		MyArrayQueue<table> queue = new MyArrayQueue<>(10);
+		table[] nodeTable = new table[size()];
 		
+		for(int i = 0;i < nodeTable.length; ++i) {
+			nodeTable[i] = new table(i, false, Integer.MAX_VALUE, 0);
+		}
+		
+		nodeTable[getIndexByVetexElement(startVetex)].dv = 0; 
+		//起点入队
+		queue.enqueue(nodeTable[getIndexByVetexElement(startVetex)]);
+		//
+		while(! queue.isEmpty()) {
+			//出队提取顶点
+			table vetexTable = queue.dequeue();
+			//遍历该顶点得所有邻接点,因为Edge类是OneWeightedAdjcacencyList的内部类，所以必须写包 + 类的路径全称
+			for(chapterNine.ArrayVetex.OneWeightedAdjacencyList.Edge edge : this.adjecenyLists[vetexTable.VetexNum].getAdjacencyEdges()) {
+				//到这里内部操作跟第一种方法类似
+				table adjacencyTable = nodeTable[edge.adjacencyVetex];
+				if(adjacencyTable.dv == Integer.MAX_VALUE) {
+					adjacencyTable.dv = vetexTable.dv + 1;
+					adjacencyTable.pv = vetexTable.VetexNum;
+					queue.enqueue(adjacencyTable);
+				}
+			}
+		}
+		this.breadthFirstSearchResult = nodeTable;
 	}
 	
 	/**

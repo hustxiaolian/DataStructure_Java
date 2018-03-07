@@ -60,6 +60,7 @@ public class MyMap<KeyType,ValueType> {
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
+			@SuppressWarnings("rawtypes")
 			Entry other = (Entry) obj;
 			if (key == null) {
 				if (other.key != null)

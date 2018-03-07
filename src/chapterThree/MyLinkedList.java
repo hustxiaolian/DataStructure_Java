@@ -10,7 +10,7 @@ import java.util.Iterator;
  * @param <AnyType>
  * @version 2018-2-2 添加addFirst,addLast
  */
-public class MyLinkedList<AnyType> implements Iterable<AnyType> {
+public class MyLinkedList<AnyType> implements Iterable<AnyType>,MyList<AnyType> {
 	
 	public static void main(String[] args) {
 		MyLinkedList<Integer> lst = new MyLinkedList<>();
@@ -112,9 +112,30 @@ public class MyLinkedList<AnyType> implements Iterable<AnyType> {
 		return theSize == 0;
 	}
 	
+	@Override
 	public boolean add(AnyType x) {
 		add(size(),x);
 		return true;
+	}
+	
+	/**
+	 * 从头到尾依次检查比对每个元素，检查其中是否有元素与插入元素存在等价关系（即equal关系）。
+	 * 时间界限为线性
+	 * 
+	 * @param x 欲插入的元素
+	 */
+	public boolean addIfAbsent(AnyType x) {
+		//遍历元素是否已经存在
+		Node<AnyType> p = getNode(x);
+		if(p == endMaker) {
+			//不存在，插入链表尾部
+			addLast(x);
+			return true;
+		}
+		else {
+			//该元素已经存在，啥也不干，直接返回
+			return false;
+		}
 	}
 	
 	public void add(int idx, AnyType x) {
@@ -463,5 +484,7 @@ public class MyLinkedList<AnyType> implements Iterable<AnyType> {
 		addBefore(beginMaker.next, removedData);
 		return removedData;
 	}
+
+	
 
 }

@@ -34,7 +34,7 @@ public final class Sort {
 	 * @param left
 	 * @param right
 	 */
-	private static <AnyType extends Comparable<? super AnyType>> void insertionSort(AnyType[] arr,int left,int right) {
+	static <AnyType extends Comparable<? super AnyType>> void insertionSort(AnyType[] arr,int left,int right) {
 		for(int i = left + 1;i <= right;++i) {
 			AnyType temp = arr[i];
 			

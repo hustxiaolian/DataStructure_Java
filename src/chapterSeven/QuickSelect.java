@@ -22,7 +22,10 @@ public class QuickSelect {
 	}
 	
 	/**
-	 * 快速选择的实际例程
+	 * 快速选择的核心例程，可以用于选择中值。
+	 * 思路：
+	 * 该算法是我自己根据《数据结构和算法分析》一书和MIT算法导论课程，将两位老师讲的，按照自己的理解结合在一起
+	 * 
 	 * @param arr
 	 * @param k
 	 * @return
@@ -30,12 +33,14 @@ public class QuickSelect {
 	public static <T extends Comparable<? super T>> T quickSelectKthElement(T[] arr, int i, int left, int right) {
 		if(left + 3 <= right)
 		{
+			//按照枢纽元分成两边。
 			int r = partition(arr, left, right);
 			int k = r - left + 1;
 			if(i ==  k)
 				//lucky,直接找到了
 				return arr[r];
 			else {
+				//unlucky,递归到左半边或者右半边。
 				if(i < k) {
 					return quickSelectKthElement(arr, i, left, r - 1);
 				}
@@ -56,6 +61,8 @@ public class QuickSelect {
 	 * 大于枢纽元的元素放在枢纽元的右边。
 	 * 
 	 * 要清楚三值分割不仅仅只有选取枢纽元的左右，更为重要的是设置了边界，使得i，j永远不会发生越界情况。
+	 * 
+	 * 值得注意的情况是，使用三值分割算法选择枢纽元数组元素数目不要小于三个。
 	 * @param arr
 	 * @param left
 	 * @param right

@@ -116,7 +116,8 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	 * 1. 使用上面四个私有类成员来记录向下搜索迭代的路径。
 	 *    分别记录了当前节点，父节点，祖父节点和曾祖父节点。一开始四个变量都在header上，
 	 * 2. 从header节点递归向下，通过compare判断路径。同时记录父链路径。最后每次循环判断当前节点的两个儿子是否为红色。是则处理下。
-	 * 3. 循环直到compare返回0，也就是达到null节点或者在红黑树种已经找到了它
+	 * 3. 循环直到compare返回0，也就是达到null节点或者在红黑树种已经找到了它，判断是否是重复节点，如果是，则执行步骤4，否则返回。
+	 * 4. 生成新节点，插入到合适的位置，然后最后进行一次handleReorient函数，常数时间。
 	 * @param x
 	 */
 	public void insert(T x) {

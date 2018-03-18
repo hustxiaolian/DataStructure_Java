@@ -50,7 +50,7 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	
 	public static void main(String[] args) {
 		RedBlackTree<Integer> t = new RedBlackTree<>();
-		Integer[] arr = {10,85,15,70,20,60,30,50,65,80,90,40,5,55};
+		Integer[] arr = {10,85,15,70,20,60,30,50,65,80,90,40,5,55,20};
 		for(int i = 0;i < arr.length;++i) {
 			t.insert(arr[i]);
 			t.printTree();
@@ -86,33 +86,6 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 			this.right = right;
 			this.color = color;
 		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((element == null) ? 0 : element.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			Node other = (Node) obj;
-			if (element == null) {
-				if (other.element != null)
-					return false;
-			} else if (!element.equals(other.element))
-				return false;
-			return true;
-		}
-		
-		
 	}
 	
 	/**
@@ -127,62 +100,25 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	
 	
 	
-	/**
-	 * 插入例程。根据算法导论课程学习而来的。
-	 * 
-	 * 其核心思想就是：
-	 * 1. 使用普通二叉搜索树的insert
-	 * 2. 将插入的节点色域置为red
-	 * 3. 这个时候大概率会破坏红黑树的红黑性。（性质3）
-	 * 
-	 * x为当前节点，p[x]为其父节点，因此p[p[x]]为其爷爷节点，left[p[p[x]]]为x的爷爷节点的左儿子
-	 * 
-	 * 其伪代码：
-	 * RB-insert(T,x):
-	 *   Tree-insert(T,x);
-	 *   color[x] <- RED;
-	 *   while x != root or color[x] = RED
-	 *     do if p[x] = left[p[p[x]]]; // class A
-	 *           then y <- right[p[p[x]]]
-	 *           if color[y] = RED
-	 *              then case<1>
-	 *           else if x = right[p[x]]
-	 *              then case<2>
-	 *              case<3>
-	 *              
-	 *        else //class B
-	 *            if p[x] = right[p[p[x]]]
-	 *               then y <- left[p[p[x]]]
-	 *               if color[y] = RED
-	 *                  then case<4>
-	 *               else if x = left[p[x]]
-	 *                   then case<5>
-	 *                   case<6>
-	 *                   
-	 *  color[root] = BLACK;
-	 *  
-	 *  case<1>://recolor
-	 *     color[p[x]] <- BLACK;
-	 *     color[y] <- Black;
-	 *     color[p[p[x]]] <- RED;
-	 *     
-	 *  case<2>://rotate
-	 *     left-rotate p[x]
-	 *     
-	 *  case<3>://rotate and recolor
-	 *     right-rotate(p[p[x]])
-	 *     recolor//这里得话题理解。
-	 *  case<4>
-	 *  
-	 *  为了保存insert迭代过程中保存路径，我们需要一些类成员变量来记录。
-	 *  
-	 * @param x
-	 */
+	
 	private Node<T> current;
 	private Node<T> father;
 	private Node<T> grand;
 	private Node<T> great;
 	
+	/**
+	 * nullNode节点模拟null，每次插入开始，nullNode的element置为x
+	 * header节点，为了根节点发生旋转后返回和编程上的方便性。并且定义他的element值为负无穷大。
+	 * 所以，整棵红黑树都挂在header的右边。compare函数，定义了当比较节点为header，永远返回1。
+	 * 
+	 * 自顶向下的插入例程。
+	 * 其核心思想和步骤是：
+	 * 1. 使用上面四个私有类成员来记录向下搜索迭代的路径。
+	 *    分别记录了当前节点，父节点，祖父节点和曾祖父节点。一开始四个变量都在header上，
+	 * 2. 从header节点递归向下，通过compare判断路径。同时记录父链路径。最后每次循环判断当前节点的两个儿子是否为红色。是则处理下。
+	 * 3. 循环直到compare返回0，也就是达到null节点或者在红黑树种已经找到了它
+	 * @param x
+	 */
 	public void insert(T x) {
 		current = father = grand = header;
 		nullNode.element = x;//用来判断是否迭代到了叶节点。
@@ -204,9 +140,9 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 				handleReorient(x);
 			}
 		}
-		
+		nullNode.element = null;
 		//判断是否迭代到了null节点。
-		if(! current.equals(nullNode)) {
+		if(current.element != null) {
 			return;
 		}
 		//生成新节点并且插入到指定位置。
@@ -218,7 +154,7 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 			father.right = current;
 		}
 		handleReorient(x);
-		nullNode.element = null;
+		
 	}
 	
 	/**
@@ -403,6 +339,62 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	 */
 	private boolean isEmpty() {
 		return header.right.equals(nullNode);
+	}
+	
+	
+	/**
+	 * 插入例程。根据算法导论课程学习而来的。
+	 * 
+	 * 其核心思想就是：
+	 * 1. 使用普通二叉搜索树的insert
+	 * 2. 将插入的节点色域置为red
+	 * 3. 这个时候大概率会破坏红黑树的红黑性。（性质3）
+	 * 
+	 * x为当前节点，p[x]为其父节点，因此p[p[x]]为其爷爷节点，left[p[p[x]]]为x的爷爷节点的左儿子
+	 * 
+	 * 其伪代码：
+	 * RB-insert(T,x):
+	 *   Tree-insert(T,x);
+	 *   color[x] <- RED;
+	 *   while x != root or color[x] = RED
+	 *     do if p[x] = left[p[p[x]]]; // class A
+	 *           then y <- right[p[p[x]]]
+	 *           if color[y] = RED
+	 *              then case<1>
+	 *           else if x = right[p[x]]
+	 *              then case<2>
+	 *              case<3>
+	 *              
+	 *        else //class B
+	 *            if p[x] = right[p[p[x]]]
+	 *               then y <- left[p[p[x]]]
+	 *               if color[y] = RED
+	 *                  then case<4>
+	 *               else if x = left[p[x]]
+	 *                   then case<5>
+	 *                   case<6>
+	 *                   
+	 *  color[root] = BLACK;
+	 *  
+	 *  case<1>://recolor
+	 *     color[p[x]] <- BLACK;
+	 *     color[y] <- Black;
+	 *     color[p[p[x]]] <- RED;
+	 *     
+	 *  case<2>://rotate
+	 *     left-rotate p[x]
+	 *     
+	 *  case<3>://rotate and recolor
+	 *     right-rotate(p[p[x]])
+	 *     recolor//这里得话题理解。
+	 *  case<4>
+	 *  
+	 *  为了保存insert迭代过程中保存路径，我们需要一些类成员变量来记录。
+	 *  
+	 * @param x
+	 */
+	public void insertMIT(T x) {
+		
 	}
 	
 }

@@ -38,6 +38,10 @@ package chapterTwelve;
  * 然后这一版插入例程根树上的不太一样，我感觉树上的例程虽然很精妙，真的是佩服。但是其可读性比较大（可能是我太弱了）。
  * 因此，按照我自己的理解，也就是分成8种情况，来写，看起来很冗长，但是我觉得我意思很明确，枚举了所有的路径可能性，
  * 提供相应的旋转和重上色步骤。当然，后续我还是精简一些明显冗余的代码，
+ * 
+ * @version <2> 2018-3-18 17:05
+ * 精简了部分功能和形式冗余的代码。
+ * 
  * @author 25040
  *
  * @param <T>
@@ -251,11 +255,16 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	}
 	
 	/**
+	 * @version 1
 	 * 根据great,grand,father和great生成的路径来判断怎么样来做那种旋转方式。
 	 * 由于x,p,g变换后的子树必须重新和great正确连接。great又有两个儿子，因此，共计8种情况。
 	 * 
 	 * 所有路径均从great开始。注意到所有的双旋转都是由单旋转构成的。
 	 * 我的天，这太可怕了，虽然代码意义很明确，但是在这么多的条件下，确实很容易写错。
+	 * 
+	 * @version 2
+	 * 精简可以合并的代码
+	 * 
 	 * 
 	 * @param x
 	 * @param great2
@@ -266,73 +275,52 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 		if(compare(x, parent) < 0) {
 			//grand左下(↙)
 			if(compare(x, parent.left) < 0) {
-				//father左下(↙)
-				if(compare(x, parent.left.left) < 0){
-					//路径为左 + 左一字形。情况1，
-					parent.left = simpleRotateWithLeftChild(parent.left);
-					return parent.left;
-					
-				}
 				//father右下(↘)
-				else {
-					//路径为左 + 左之字形。情况2.
+				if(compare(x, parent.left.left) > 0){
+					//路径为右 + 左一字形。情况2，将其转换为情况1，然后复用情况1的代码，完成双旋转
 					parent.left.left = simpleRotateWithRightChild(parent.left.left);
-					parent.left = simpleRotateWithLeftChild(parent.left);
-					return parent.left;
 				}
+				//father右下(↘)，路径为左 + 左一字形。情况1.
+				parent.left = simpleRotateWithLeftChild(parent.left);
 			}
 			//grand右下（↘）
 			else {
 				//father左下（↙）
 				if(compare(x, parent.left.right) < 0) {
-					//路径为左 + 右之字形.情况3
+					//路径为左 + 右之字形.情况3，将其转换为情况4
 					parent.left.right = simpleRotateWithLeftChild(parent.left.right);
-					parent.left = simpleRotateWithRightChild(parent.left);
-					return parent.left;
 				}
-				//father右下（↘）
-				else {
-					//路径为左 + 右一字形，情况4
-					parent.left = simpleRotateWithRightChild(parent.left);
-					return parent.left;
-				}
+				//father右下（↘）//路径为左 + 右一字形，情况4
+				parent.left = simpleRotateWithRightChild(parent.left);
 			}
+			//实际上都是返回了great的左儿子，也就是旋转之后最上层的节点
+			return parent.left;
 		}
 		//great右下（↘）.情况完全跟上面镜像。
 		else {
 			//grand左下(↙)
 			if(compare(x, parent.right) < 0) {
 				//father左下(↙)
-				if(compare(x, parent.right.left) < 0){
-					//路径为右 + 左一字形。情况1，
-					parent.right = simpleRotateWithLeftChild(parent.right);
-					return parent.right;
-					
-				}
-				//father右下(↘)
-				else {
-					//路径为右 + 左之字形。情况2.
+				if(compare(x, parent.right.left) > 0){
+					//路径为右 + 左之字形。情况2.将其转换为情况1
 					parent.right.left = simpleRotateWithRightChild(parent.right.left);
-					parent.right = simpleRotateWithLeftChild(parent.right);
-					return parent.right;
 				}
+				//路径为右 + 左一字形。情况1，
+				parent.right = simpleRotateWithLeftChild(parent.right);
 			}
 			//grand右下（↘）
 			else {
 				//father左下（↙）
 				if(compare(x, parent.right.right) < 0) {
-					//路径为右 + 右之字形.情况3
+					//路径为右 + 右之字形.情况3，将其转换为情况4
 					parent.right.right = simpleRotateWithLeftChild(parent.right.right);
-					parent.right = simpleRotateWithRightChild(parent.right);
-					return parent.right;
 				}
 				//father右下（↘）
-				else {
-					//路径为右 + 右一字形，情况4
-					parent.right = simpleRotateWithRightChild(parent.right);
-					return parent.right;
-				}
+				//路径为右 + 右一字形，情况4
+				parent.right = simpleRotateWithRightChild(parent.right);
 			}
+			//实际上都是返回了great的右儿子，也就是旋转之后最上层的节点
+			return parent.right;
 		}
 	}
 

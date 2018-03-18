@@ -25,9 +25,9 @@ public class FabonacciNumbers {
 	}
 	
 	/**
-	 * 使用递归求解int的pow一样的技巧，使用递归
+	 * 使用递归求解int的pow一样的技巧，使用递归。能够在对数时间内完成矩阵的幂运算。
 	 * @param matrix
-	 * @param n
+	 * @param n 幂数
 	 * @return
 	 */
 	private static int[][] fabanacciMatrixPow(int[][] matrix, int n){
@@ -45,6 +45,8 @@ public class FabonacciNumbers {
 	 * 两个元素类型为整数的矩阵相乘
 	 * 第一个矩阵的列数=第二个矩阵的行数。
 	 * 根据矩阵乘法的性质
+	 * 
+	 * 时间界限为O（N^3）
 	 * 
 	 * @param a
 	 * @param b

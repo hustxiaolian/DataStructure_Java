@@ -1,6 +1,7 @@
 package chapterFive;
 
 
+import java.awt.image.SampleModel;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * 书中第5.21题。散列表实现拼写检查程序，这里实现对一个英文TXT文件，进行检查，输出错误（即不在散列表中单词）
@@ -29,7 +31,7 @@ public class SpellCheck {
 		Map<String, List<String>> hashMap = null;
 		try {
 			long start = System.currentTimeMillis();
-			 hashMap = SpellCheck.getSmartAddOneCharHashMap1(dicPath);
+			 hashMap = SpellCheck.getSmartDiffOneCharHashMap(dicPath);
 			long end = System.currentTimeMillis();
 			System.out.println("use time(ms):" + (end - start));
 			//saveHashTable("D:\\javaCode\\DataStructure\\dictionary_2036.txt", hashTable);
@@ -40,8 +42,8 @@ public class SpellCheck {
 			e.printStackTrace();
 		}
 		
-		
-		System.out.println(hashMap.get("an"));
+		//System.out.println(isOnlyDiffOneCharWithTwoWord("liaolaan", "xiaolian"));
+		System.out.println(hashMap.get("here"));
 	}
 	
 	
@@ -188,6 +190,45 @@ public class SpellCheck {
 	}
 	
 	/**
+	 * 构建key为某个单词，其值为——该单词变换一个字母能得到的所有的单词。——的list
+	 * 
+	 * 思路步骤:
+	 * 1. 初始化对象，调用builtWordByLengthHashMap函数，获得根据字母长度进行分类的map。key为单词长度，value为对应长度的单词list
+	 * 2. 遍历每一个list。然后在每一个list内部，对所有的单词进行互相比较。只相差一个字母的单词，互相加入对方的value表中。
+	 * 3. 返回
+	 * 
+	 * 时间界限还是O（N^3）
+	 * 
+	 * @param path 单词文件的路径
+	 * @return 
+	 * @throws IOException  文件打开IO异常，直接向上抛出
+	 */
+	public static Map<String, List<String>> getSmartDiffOneCharHashMap(String path) throws IOException{
+		Map<String, List<String>> smartHashMap = new HashMap<>();
+		Map<Integer, List<String>> wordByLength = builtWordByLengthHashMap(path);
+		
+		//遍历每个entry块
+		for(Entry<Integer, List<String>> entry : wordByLength.entrySet()) {
+			List<String> wordWithsameLength = entry.getValue();
+			
+			if(wordWithsameLength == null) {
+				continue;
+			}
+			
+			//在链表内部互相比较两个单词，如果两个单词只有一个字母不同则加入数组
+			for (String oneWord : wordWithsameLength) {
+				for (String otherWord : wordWithsameLength) {
+					if(isOnlyDiffOneCharWithTwoWord(oneWord, otherWord)) {
+						updateMap(smartHashMap, oneWord, otherWord);
+					}
+				}
+			}
+		}
+		
+		return smartHashMap;
+	}
+	
+	/**
 	 * 读取字典原始文件，建立一个按照字母字符长度的HashMap
 	 * @param path 字典文件的路径
 	 * @return 按照字符数分类的map，键为字符数，值为字符数为键值的单子列表
@@ -247,6 +288,39 @@ public class SpellCheck {
 		return false;
 	}
 	
-	
+	/**
+	 * 判断两个单词是否只有一个字母不同。同一个单词也会返回false。
+	 * 线性界限为线性
+	 * 
+	 * 后期可以很简单的改写下，来判断两个单词是否只有x个单词不同。
+	 * @param w1 
+	 * @param w2
+	 * @return 
+	 * @throws java.lang.IllegalArgumentException - w1,w2任意一个为null或者空字符串
+	 */
+	public static boolean isOnlyDiffOneCharWithTwoWord(String w1, String w2) {
+		if(w1 == null | w2 == null | w1.length() == 0 | w2.length() == 0) {
+			throw new IllegalArgumentException();
+		}
+		//两单词不同，直接返回false
+		if(w1.length() != w2.length()) {
+			return false;
+		}
+		
+		int diffCount = 0;
+		//遍历检查每个字母
+		for(int i = 0;i < w1.length();++i) {
+			if(w1.charAt(i) != w2.charAt(i)) {
+				if(++diffCount > 1)
+					return false;
+			}
+		}
+		//两个单词完全相等
+		if(diffCount == 0) {
+			return false;
+		}
+		
+		return true;
+	}
 	
 }

@@ -36,7 +36,7 @@ public class MyHashMap<KeyType,ValueType> {
 	 * @param <KeyType>
 	 * @param <ValueType>
 	 */
-	private static class Entry<KeyType,ValueType>{
+	public static class Entry<KeyType,ValueType>{
 		KeyType key;
 		ValueType value;
 		
@@ -44,6 +44,20 @@ public class MyHashMap<KeyType,ValueType> {
 			this.key = key;
 			this.value = value;
 		}
+		
+		
+
+		public KeyType getKey() {
+			return key;
+		}
+
+
+
+		public ValueType getValue() {
+			return value;
+		}
+
+
 
 		@Override
 		public int hashCode() {
@@ -184,6 +198,61 @@ public class MyHashMap<KeyType,ValueType> {
 			}
 		}
 		return sb.toString();
+	}
+	
+	/**
+	 * 返回所有元素Entry数组
+	 * 测试通过。
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public Entry<KeyType,ValueType>[] toEntryArray() {
+		Entry<KeyType,ValueType>[] result = new Entry[size()];
+		int i = 0;//result数组的下标索引
+		
+		//遍历整个hashmap
+		for(int j = 0;j < this.theLists.length; ++j) {
+			//判断分离链接法的某个指针是否空，是则跳过
+			if(!this.theLists[j].isEmpty()) {
+				for (Iterator<Entry<KeyType, ValueType>> iterator = this.theLists[j].iterator(); iterator.hasNext();) {
+					Entry<KeyType, ValueType> entry = iterator.next();
+					result[i++] = entry;
+				}
+			}
+		}
+		
+		for (Entry<KeyType, ValueType> entry : result) {
+			System.out.println(entry.key + " " + entry.value);
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * 返回所有元素的Key数组
+	 * 报错：类型转换错误
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public KeyType[] toKeyArray() {
+		KeyType[] result = (KeyType[]) new Object[size()];
+		int i = 0;
+		
+		for(int j = 0;j < this.theLists.length; ++j) {
+			//判断分离链接法的某个指针是否空，是则跳过
+			if(!this.theLists[j].isEmpty()) {
+				for (Iterator<Entry<KeyType, ValueType>> iterator = this.theLists[j].iterator(); iterator.hasNext();) {
+					Entry<KeyType, ValueType> entry = iterator.next();
+					result[i++] = entry.key;
+				}
+			}
+		}
+		
+		for (KeyType keyType : result) {
+			System.out.println(keyType + " ");
+		}
+		
+		return result;
 	}
 
 	/**

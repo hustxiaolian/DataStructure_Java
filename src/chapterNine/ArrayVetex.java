@@ -310,6 +310,27 @@ endSearch:
 	}
 	
 	/**
+	 * 使用贪婪算法，求有权图中的最短路径问题
+	 * 根使用广度优先搜索的方法求无权图差不多
+	 * @param startVetex
+	 */
+	public void dijkstra(T startVetex) {
+		MyArrayQueue<table> queue = new MyArrayQueue<>(10);
+		table[] nodeTable = new table[size()];
+		
+		for(int i = 0;i < nodeTable.length; ++i) {
+			nodeTable[i] = new table(i, false, Integer.MAX_VALUE, 0);
+		}
+		nodeTable[getIndexByVetexElement(startVetex)].dv = 0; 
+		//把起点入队
+		queue.enqueue(nodeTable[getIndexByVetexElement(startVetex)]);
+		
+		while(! queue.isEmpty()) {
+			//把队列的项目拿出
+		}
+	}
+	
+	/**
 	 * 用于计算最短路径得表
 	 * 
 	 * @author 25040

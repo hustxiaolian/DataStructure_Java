@@ -48,7 +48,8 @@ public class HashMapAdjacencyList<T> {
 		graph.builtAdjacency("v7", new String[] {"v6"}, new int[] {1});
 		//System.out.println(graph.toString());
 		//System.out.println(graph.breathFirstSearch("v3", "v7"));
-		System.out.println(graph.getShortestPathWithWeightedGraph("v3", "v5"));
+		//System.out.println(graph.getShortestPathWithWeightedGraph("v3", "v5"));
+		//System.out.println(graph.inDegree("v4"));
 	}
 	
 	//属性存储一个HashMap
@@ -295,6 +296,47 @@ public class HashMapAdjacencyList<T> {
 		}
 		return correctPath;
 	}
+	
+	/**
+	 * 计算单个节点的入度。
+	 * 计算入度就比较麻烦了。得遍历所有节点的所有邻接表来确认。
+	 * 
+	 * 
+	 * @param x
+	 * @return
+	 */
+	public int inDegree(T x) {
+		int result = 0;
+		
+		//遍历所有邻接表
+		for(Entry<T, OneVetexAdjacencyList<T>> entry : this.map.entrySet()) {
+			//如果是当前节点的邻接表完全可以跳过。
+			if(x.equals(entry.getKey())) {
+				continue;
+			}
+			//获取边的list
+			OneVetexAdjacencyList<T> thisAdjList = entry.getValue();
+			LinkedList<Edge<T>> edgeList = thisAdjList.getAdjacencyVetexList();
+			//遍历所有边，即所有当前邻接点的所有顶点
+			for (Edge<T> edge : edgeList) {
+				//如果别的顶点的邻接表内的邻接点是x的画，计数器+1
+				if(x.equals(edge.getNextVetex())) {
+					++result;
+				}
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * 计算单个阶段的出度。即返回当前顶点的邻接表内输出边的条数
+	 * @param x
+	 * @return
+	 */
+	public int outDegree(T x) {
+		OneVetexAdjacencyList<T> thisList = this.map.get(x);
+		return thisList.getAdjacencyVetexList().size();
+	}
 }
 
 /**
@@ -437,5 +479,7 @@ class Edge<T>{
 	public String toString() {
 		return (nextVetex +"("+ weight +")"); 
 	}
+	
+	
 }
 

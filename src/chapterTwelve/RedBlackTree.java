@@ -1,5 +1,7 @@
 package chapterTwelve;
 
+import java.util.*;
+
 /**
  * 根据MIT算法导论和数据结构一书，自己编写红黑树的例程。
  * 
@@ -42,6 +44,9 @@ package chapterTwelve;
  * @version <2> 2018-3-18 17:05
  * 精简了部分功能和形式冗余的代码。
  * 
+ * @version <3> 2018-3-22 09:13
+ * 完成了MIT课程提到的从底向上的插入例程。
+ * 
  * @author 25040
  *
  * @param <T>
@@ -50,9 +55,9 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	
 	public static void main(String[] args) {
 		RedBlackTree<Integer> t = new RedBlackTree<>();
-		Integer[] arr = {10,85,15,70,20,60,30,50,65,80,90,40,5,55,20};
+		Integer[] arr = {10,85,15,70,20,60,30,50,65,80,90,40,5,55,20,25,35};
 		for(int i = 0;i < arr.length;++i) {
-			t.insert(arr[i]);
+			t.insertMIT(arr[i]);
 			t.printTree();
 		}
 		
@@ -60,7 +65,6 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	
 	private static final int BLACK = 1;
 	private static final int RED = 0;
-	
 	
 	private Node<T> header;
 	private Node<T> nullNode;
@@ -147,7 +151,7 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 			return;
 		}
 		//生成新节点并且插入到指定位置。
-		current = new Node<>(x,nullNode,nullNode,RED);
+		current = new Node<>(x, nullNode, nullNode,RED);
 		if(compare(x, father) < 0) {
 			father.left = current;
 		}
@@ -304,6 +308,7 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 			return x.compareTo(t.element);
 		}
 	}
+
 	
 	/**
 	 * 打印红黑树
@@ -324,12 +329,12 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	 */
 	private void printTree(Node<T> t,int tabNum) {
 		if(t.element != null) {
-			printTree(t.left, tabNum + 1);
+			printTree(t.right, tabNum + 1);
 			for(int i = 0;i < tabNum;++i){
 				System.out.print("\t");
 			}
 			System.out.println(t.element + (t.color == 1? "(B)":"(R)"));
-			printTree(t.right, tabNum + 1);
+			printTree(t.left, tabNum + 1);
 		}
 		
 	}
@@ -390,12 +395,184 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	 *     recolor//这里得话题理解。
 	 *  case<4>
 	 *  
-	 *  为了保存insert迭代过程中保存路径，我们需要一些类成员变量来记录。
+	 *  使用自底向上的插入例程，需要一个栈使我们能够向上回溯插入节点的父链。
 	 *  
 	 * @param x
 	 */
 	public void insertMIT(T x) {
+		//使用堆栈来记录路径
+		Stack<Node<T>> s = new Stack<>();
+		//使得可以用用compare = 0来判断循环终止的条件。
+		nullNode.element = x;
+		//引用当前正在迭代的节点
+		Node<T> current = header;
 		
+		/*
+		 * 这里相当于实现了二叉树的非递归插入例程，即伪代码的Tree-insert
+		 */
+		while(!(compare(x, current) == 0)) {
+			//压入堆栈，记录向下路径，header节点也被压入了堆栈
+			s.push(current);
+			//根据数的性质，判断左右
+			current = compare(x, current) < 0 ? current.left : current.right;
+		}
+		nullNode.element = null;
+		//判断是不是到达了null节点，还是中间就找到了等值的节点
+		if(current.element != null) {
+			//找到了等值节点，直接返回
+			return;
+		}
+		/*
+		 * 伪代码对应的color[x] = red;
+		 */
+		//创建新的节点，生成新节点，上色为红色，并且插入正确的父节点位置
+		//bug 3 不能这样current = new Node<>(x, null, null, RED);
+		current = new Node<>(x, nullNode, nullNode, RED);
+		Node<T> father = s.peek();//错误1，改之前是pop，破坏了father路径。
+		if(compare(x, father) < 0) {
+			father.left = current;
+		}
+		else {
+			father.right = current;
+		}
+		
+		/*
+		 * 自底向上的fix例程，其实我们关注地就是在如何不破坏性质4的情况下，向上修复性质3
+		 */
+		//bug 2 ：当红黑树中的节点过少的时候，完全没必要fix，直接插入红节点，置黑根节点即可。
+		//即红黑树插入第一个元素和第二个元素时根本没必要fix,注意到堆栈中还有header节点。
+		if(s.size() >= 3) {
+			downToUpFix(current, s, x);	
+		}
+		else {
+			header.right.color = BLACK;
+		}
+			
+	}
+	
+	/**
+	 * 自底向上的fix例程，其实我们关注地就是在如何不破坏性质4的情况下，向上修复性质3
+	 * 共计分为六种情况。左半边三种和右半边三种镜像对称。
+	 * 
+	 * @param current 新插入节点的引用
+	 * @param s       回溯路径的堆栈
+	 * @param x       新插入节点的具体值
+	 */
+	private void downToUpFix(Node<T> current, Stack<Node<T>> s , T x) {
+		//判断是否向上到达了根节点或者当前节点是否继续红色
+		boolean isEnd = (s.peek().color == RED);
+		//bug 7 不应该无条件进入一次，应该检查当前插入的红色节点是否直接满足了红黑性，不用做任何变化
+		//即只有插入节点的父亲也是红色的时候才需要进行变换
+		while(isEnd) {
+			Node<T> father = s.pop();
+			Node<T> grand = s.pop();
+			//x == left[p[p[x]]],这是情况为左半边的三种情况，右半边的三种情况
+			//判断当前节点是否是爷爷节点的左子树中
+			if(compare(x, grand) < 0) {
+				Node<T> uncle = grand.right;
+				//判断你的叔叔节点是否是红色
+				if(uncle.color == RED) {
+					//case 1 重上色
+					father.color = BLACK;
+					uncle.color = BLACK;
+					grand.color = RED;
+					//continue向上修复
+					current = grand;
+					//test
+					//System.out.println("insert" + x + "-case1");
+					//this.printTree();
+					//去掉continue;
+				}
+				else {
+					//判断当前节点是否是父节点的右儿子
+					if(compare(x, father) > 0) {
+						//case 2 旋转，将现场情况变为情况3,注意这里旋转后，破坏了grand，father和current的正确路径关系
+						//bug 4 应该是它的左儿子或者右儿子。grand = simpleRotateWithLeftChild(father);
+						grand.left = simpleRotateWithRightChild(father);
+						//test
+						//System.out.println("insert" + x + "-case2");
+						//this.printTree();
+					}
+					//case 3 旋转并且重新上色, 并且正确连接到曾祖父的左节点或者右节点
+					grand.color = RED;//通过观察，我们发现爷爷节点总是要变成红色的。
+				    Node<T> great = s.peek();//不要从堆栈中取出来
+				    
+				    if(compare(x, great) < 0) {
+				    	great.left = simpleRotateWithLeftChild(grand);
+				    	great.left.color = BLACK;
+				    	current = great.left;
+				    }
+				    else {
+				    	great.right = simpleRotateWithLeftChild(grand);
+				    	great.right.color = BLACK;
+				    	//bug 6 还是得把current放在正确得位置上，虽然它是最后一步
+				    	current = great.right;
+				    }
+				    //test
+				    //System.out.println("insert" + x + "-case3");
+					//this.printTree();
+				}
+			}
+			//右半边3种情况，算法思路都一样，只需要左右互换。考查小心细致的时候到了
+			else {
+				Node<T> uncle = grand.left;
+				//判断当前节点的叔叔节点是否为红色。
+				if(uncle.color == RED) {
+					//case 4 重上色后继续向上
+					father.color = BLACK;
+					uncle.color = BLACK;
+					grand.color = RED;
+					
+					//continue向上修复
+					current = grand;
+					//test
+					//System.out.println("insert" + x + "-case4");
+					//this.printTree();
+					//去掉continue
+				}
+				else {
+					//判断当前节点是否是父节点
+					if(compare(x, father) < 0) {
+						//case 5 旋转变成情况6.注意这里旋转后，破坏了father和current的正确路径关系
+						//bug 4 应该是它的左儿子或者右儿子。grand = simpleRotateWithLeftChild(father);
+						grand.right = simpleRotateWithLeftChild(father);	
+						//test
+						//System.out.println("insert" + x + "-case5");
+						//this.printTree();
+						
+					}
+					//case 6 旋转，重上色。然后把旋转后的子树链接到曾祖父节点合适的位置上。
+					grand.color = RED;
+					Node<T> great = s.peek();
+					
+					if(compare(x, great) < 0) {
+						great.left = simpleRotateWithRightChild(grand);
+						great.left.color = BLACK;
+						current = great.left;
+					}else {
+						//bug 5 智障了，写成了simpleRotateWithLeftChild
+						great.right = simpleRotateWithRightChild(grand);
+						great.right.color = BLACK;
+						current = great.right;
+					}
+					//test
+					//System.out.println("insert" + x + "-case6");
+					//this.printTree();
+				}
+			}
+			//判断现在的树满足红黑性
+			isEnd =  !( current.element.equals(header.right.element)) ;
+			if(isEnd) {
+				if(current.color == RED) {
+					if(s.peek().color == BLACK)
+						isEnd = false;
+				}
+				else {
+					isEnd = false;
+				}
+			}
+		}
+		header.right.color = BLACK;
 	}
 	
 }

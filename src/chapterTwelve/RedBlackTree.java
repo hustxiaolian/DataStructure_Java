@@ -47,6 +47,9 @@ import java.util.*;
  * @version <3> 2018-3-22 09:13
  * 完成了MIT课程提到的从底向上的插入例程。
  * 
+ * @version <4> 2018-3-25 22:41
+ * 完成了自顶向下的删除例程，并且测试通过。
+ * 
  * @author 25040
  *
  * @param <T>
@@ -56,11 +59,14 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	public static void main(String[] args) {
 		RedBlackTree<Integer> t = new RedBlackTree<>();
 		Integer[] arr = {10,85,15,70,20,60,30,50,65,80,90,40,5,55,20,25,35};
+		//Integer[] arr = {10,15,20};
 		for(int i = 0;i < arr.length;++i) {
 			t.insertMIT(arr[i]);
-			t.printTree();
+			
 		}
-		
+		t.printTree();
+		t.delete(55);
+		t.printTree();
 	}
 	
 	private static final int BLACK = 1;
@@ -97,7 +103,7 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 	 */
 	public RedBlackTree() {
 		this.nullNode = new Node<>(null,null,null,BLACK);
-		this.nullNode.left = this.nullNode.right = nullNode;
+		this.nullNode.left = this.nullNode.right = nullNode;//现在看来这里的这个设计实在是太妙了。
 		this.header = new Node<>(null,null,null,BLACK);
 		this.header.left = this.header.right = nullNode;
 	}
@@ -221,7 +227,7 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 					//路径为右 + 左一字形。情况2，将其转换为情况1，然后复用情况1的代码，完成双旋转
 					parent.left.left = simpleRotateWithRightChild(parent.left.left);
 				}
-				//father右下(↘)，路径为左 + 左一字形。情况1.
+				//father左下(↘)，路径为左 + 左一字形。情况1.
 				parent.left = simpleRotateWithLeftChild(parent.left);
 			}
 			//grand右下（↘）
@@ -478,9 +484,6 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 					grand.color = RED;
 					//continue向上修复
 					current = grand;
-					//test
-					//System.out.println("insert" + x + "-case1");
-					//this.printTree();
 					//去掉continue;
 				}
 				else {
@@ -489,9 +492,6 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 						//case 2 旋转，将现场情况变为情况3,注意这里旋转后，破坏了grand，father和current的正确路径关系
 						//bug 4 应该是它的左儿子或者右儿子。grand = simpleRotateWithLeftChild(father);
 						grand.left = simpleRotateWithRightChild(father);
-						//test
-						//System.out.println("insert" + x + "-case2");
-						//this.printTree();
 					}
 					//case 3 旋转并且重新上色, 并且正确连接到曾祖父的左节点或者右节点
 					grand.color = RED;//通过观察，我们发现爷爷节点总是要变成红色的。
@@ -508,9 +508,6 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 				    	//bug 6 还是得把current放在正确得位置上，虽然它是最后一步
 				    	current = great.right;
 				    }
-				    //test
-				    //System.out.println("insert" + x + "-case3");
-					//this.printTree();
 				}
 			}
 			//右半边3种情况，算法思路都一样，只需要左右互换。考查小心细致的时候到了
@@ -525,9 +522,6 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 					
 					//continue向上修复
 					current = grand;
-					//test
-					//System.out.println("insert" + x + "-case4");
-					//this.printTree();
 					//去掉continue
 				}
 				else {
@@ -535,11 +529,7 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 					if(compare(x, father) < 0) {
 						//case 5 旋转变成情况6.注意这里旋转后，破坏了father和current的正确路径关系
 						//bug 4 应该是它的左儿子或者右儿子。grand = simpleRotateWithLeftChild(father);
-						grand.right = simpleRotateWithLeftChild(father);	
-						//test
-						//System.out.println("insert" + x + "-case5");
-						//this.printTree();
-						
+						grand.right = simpleRotateWithLeftChild(father);						
 					}
 					//case 6 旋转，重上色。然后把旋转后的子树链接到曾祖父节点合适的位置上。
 					grand.color = RED;
@@ -555,9 +545,6 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 						great.right.color = BLACK;
 						current = great.right;
 					}
-					//test
-					//System.out.println("insert" + x + "-case6");
-					//this.printTree();
 				}
 			}
 			//判断现在的树满足红黑性
@@ -575,5 +562,287 @@ public class RedBlackTree<T extends Comparable<? super T>> {
 		header.right.color = BLACK;
 	}
 	
+	/**
+	 * 编写红黑树的删除例程。
+	 * 
+	 * 分析欲删除节点儿子的分布情况，具有以下四种情况：
+	 * case 1. 带有两个儿子->用右子树的最小节点替代它。我们对该节点的右子树使用delete例程。
+	 *         注意传递正确的父节点，祖父节点引用，以被第二次删除例程可能发生的旋转使用。
+	 *         该右子树的最小节点必然最多只有一个右儿子。情况变成了case 2
+	 * case 2. 只有一个儿子，可以画图分析，这种情况下，该节点只有可能是黑色的，并且另外一个儿子是红色的。
+	 *         直接用儿子替换当前值，然后把儿子挂掉就行了。
+	 * case 3. 红树叶。直接删除。
+	 * 
+	 * 
+	 * 下面是是如何从上到下保证删除期间树叶都是红色的。
+	 * 设X为当前节点，T为X的兄弟节点，P为X的父节点，G为祖父节点
+	 * 1.开始时，我们把根节点涂成红色的。当沿树向下遍历时，我们设法保证X是红色的。
+	 * 2.当到达一个新节点时，我们要确定P是红色并且X和T是黑的(因为不能有两个相连的红色节点)。
+	 * 
+	 * 在向下递归的过程中，我们可能会遇到以下几种情况：
+	 * 注意前提：P是红色的，x是黑色的，T 是黑色的。
+	 * 
+	 * 第一种情况，X有两个黑儿子。case A
+	 * 1.此时有三种子情况。如果T也有两个黑儿子，那么可以翻转X，T和P的颜色来保持这种不变性。case A-1
+	 * 2.否则，T的儿子之一是红的。case A-2
+	 *   //如果T节点的儿子之一是红色的。case A-2.在这种情况下，又可以分为两种情况
+	 *	  //如果P，T，R形成了一字形，只需要一次单旋转+重上色即可。
+	 *	  //如果P,T,R形成了之字形，那么需要一次双旋转+重上色才行。
+	 *    //可以复用插入例程的rotate
+	 * 
+	 * 第二种情况。case B 。X的儿子之一是红的。
+	 * 1. 在这种情形下，继续向下一轮，得到新的X，T和P。如果幸运，X落在红儿子上，得到新的X，T和P,那就再向下一轮。case B-1
+	 * 2. 如果不是这样，那么我们知道T是红的，而X和P将是黑的。我们旋转T和P，并且将P置为红色，T置为黑色。这样有回到了case A继续处理。
+	 * 
+	 * 迭代删除中fix，路径记录，当前节点向下一轮和删除判断的先后顺序很重要。
+	 * 1.在我写的例程中，初始状态，current节点设置为header.right,也就是实际的根节点，并且置为红色。
+	 *   这样，fix函数，一定会跳过根节点这一轮，不做任何处理，直接return回来。而father节点，grand节点全部置为header。
+	 * 2.迭代向下的while循环中
+	 *   先fix将current置为红色(根节点会跳过这一轮)，然后进行删除判断（判断当前节点是否为要删除的节点，并且分情况处理），
+	 *   再记录迭代路径（更新father和grand），最后让current向下一层。
+	 * 
+	 * 
+	 * @param x 
+	 * @return 
+	 */
+	public void delete(T x) {
+		header.right.color = RED;
+		delete(header.right, header, header, x);
+		header.right.color = BLACK;
+	}
+	
+	/**
+	 * 
+	 * 步骤和顺序应该是：
+	 * 1.先对当前节点的情况进行判断，完成fix，
+	 * 2.再判断当前节点是否等于要欲删除的节点。如果是则分情况进行删除
+	 * 3.如果不是，继续向下迭代。
+	 * 
+	 * @param t
+	 * @param x
+	 * @return
+	 */
+	private void delete(Node<T> root, Node<T> rootFather, Node<T> rootGrand, T x) {
+		//使用类变量来传递不同函数之间的参数，避免混乱
+		current = root;
+		father = rootFather;
+		//bug 3 将该函数第三个实参名字设置为了grand，遮挡了类成员变量
+		//grand = grand
+		grand = rootGrand;
+		/*
+		//bug 1 应该在上层的delete来干这件事，因为该delete可能会用到递归两次。
+		//将当前树的根节点涂成红色
+		//root.color = RED;
+		*/
+		//开始向下迭代,直到迭代到nullNode。
+		while(current.element != null) {
+			//
+			//fix将x变为红色
+			judgeAndFix(x);
+			//因为，上面的变色操作，可能把null节点也变成了红色。后果未知，为了防止出现意外，强制变为黑色。
+			nullNode.color = BLACK;
+			
+			//
+			int compareResult = compare(x, current);
+			if(compareResult == 0) {
+				//如果是双儿子的情况
+				if(current.left.element != null && current.right.element != null) {
+					//双儿子的情况下，先用当前节点的右子树的最大值来替换
+					current.element = findMin(current.right).element;
+					
+					//bug 2 当红黑树只有三个元素的时候，会出错。修正，把delete的传参形式改下。
+					//追加了grand参数，这样就算特殊情况需要rotate的时候，不会出错。同时也不再需要返回值。
+					//current.right = delete(current.right, current, current.element)
+					delete(current.right, current, father, current.element);
+					
+					//注意到，这里递归delete之后，current啥的都是完全混乱的，不能用，但是因为delete例程最多只会执行两轮，所以不受影响。
+					//这里完成后，直接break跳出了
+				}
+				//单儿子或者没儿子的情况,不能把单儿子和没儿子两种情况放在一起
+				else {
+					//树叶，没儿子，直接干掉
+					if(current.left.element == null && current.right.element == null) {
+						if(compare(current.element, father) < 0) {
+							father.left = nullNode;
+						}
+						else {
+							father.right = nullNode;
+						}
+					}
+					//单儿子，这里注意到，单儿子的情况下，删除节点最多只有一个儿子。
+					//而且这种情况下，欲删除节点必然是黑色的，它的左儿子或者右儿子必然是红色的。
+					//直接拿左儿子或者右儿子的值来替换删除节点的值，再删除右儿子或者右儿子。
+					else {
+						Node<T> temp = current.left.element != null ? current.left : current.right;
+						current.element = temp.element;
+						current.left = current.right = nullNode;
+					}
+				}
+				//删除后直接退出
+				break;
+			}
+			
+			//用于追溯路径
+			grand = father;
+			father = current;
+			
+			
+			//向下迭代一次,判断x和当前节点,小于则向左，大于向右，等于不动作。
+			if(compareResult < 0) {
+				current = current.left;
+			}
+			else {
+				current = current.right;
+			}
+		
+		}
+		//bug 1 
+		//将当前子树的根节点重新上色为黑色。
+		//root.color = BLACK;
+		//return subTreeRoot;
+	}
+	
+	/**
+	 * 寻找当前树的最小值，并且返回它的节点引用
+	 * @param right
+	 * @return
+	 */
+	private Node<T> findMin(Node<T> t) {
+		//一直迭代直到到null节点。它就是该树的最小值。
+		while(t.left.element != null) {
+			t = t.left;
+		}
+		
+		return t;
+	}
+
+	/**
+	 * 为了方便，设定X为当前节点，P为父节点，T为兄弟节点，G为祖父节点。
+	 * 
+	 * 根据递归情况，我们的目的是保证在向下删除的过程中，设法保证X节点为红色，这样直到X为红树叶。就可以直接删除。
+	 * 也就是说，当X迭代到下一层节点时，P必须为红色的并且X，T为黑色的。
+	 * 
+	 * 判断当前节点儿子的情况，并且作相应的处理，共计可以分为A和B两种大情况。
+	 * A：X有两个黑儿子
+	 * 1.T也有两个黑儿子。那么把X,T,P的颜色全部反转一遍即可。
+	 * 2.T的两个之一是红色的。那么需要作一些旋转和重新上色的处理。
+	 *    //如果T节点的儿子之一是红色的。case A-2.在这种情况下，又可以分为两种情况
+	 *	  //如果P，T，R形成了一字形，只需要一次单旋转+重上色即可。
+	 *	  //如果P,T,R形成了之字形，那么需要一次双旋转+重上色才行。
+	 *    //可以复用插入例程的rotate
+	 * 
+	 * B：X的两个儿子之一是红色的（包含X的儿子全是红色的情况）。首先，继续向下一层。
+	 * 1.如果幸运的话,x向下迭代到了红儿子，那么我们继续向下一层，此时X必定为黑色了。回到了情况判断的原始状态
+	 * 2.如果不够幸运的话，x向下迭代到了黑儿子，我们就需要经过旋转P和T，并且重上色T和P。这样x的父亲又变回红色了。回到情况A。
+	 * 
+	 * 
+	 * @param x 欲删除节点的值，主要用于判断X，P，T，G之间路径形状。不同的路径形状，需要不同的旋转和上色处理。
+	 * 同时，该函数还使用了类成员变量(current,father,grand)来回溯路径信息。
+	 */
+	private void judgeAndFix(T x) {
+		//情况B的幸运情况的特殊情况，不需要处理，下一轮。目的已达到，就此罢手
+		if(current.color == RED) {
+			return;
+		}
+		
+		//情况B的不幸情况,只有此时，P节点才是黑色
+		if(father.color == BLACK) {
+			//先重上色
+			Node<T> brother = compare(x, father) < 0 ? father.right : father.left;
+			brother.color = BLACK;
+			father.color = RED;
+			//正确旋转并且重新连接,并且将current，father，grand之间重新理顺，确保正确。画图理解。
+			if(compare(x, grand) < 0) {
+				if(compare(x, father) > 0) {
+					grand.left = simpleRotateWithLeftChild(grand.left);
+				}
+				else {
+					grand.left = simpleRotateWithRightChild(grand.left);
+				}
+				//注意这里正确地重新设置好grand的值。
+				grand = grand.left;
+			}
+			else {
+				if(compare(x, father) > 0) {
+					grand.right = simpleRotateWithLeftChild(grand.right);
+				}
+				else {
+					grand.right = simpleRotateWithRightChild(grand.right);
+				}
+				grand.right = grand;
+			}
+		}
+	
+		//情况A和B的判断
+		if(hasTowBlackChild(current)) {
+			//情况A
+			//获取当前节点的兄弟对象，判断它两个儿子的状态
+			Node<T> brother = compare(x, father) < 0 ? father.right : father.left;
+			if(hasTowBlackChild(brother)) {
+				//如果T节点也有两个黑色的儿子，那么case A-1，重新上色即可
+				father.color = BLACK;
+				current.color = RED;
+				brother.color = RED;
+			}
+			else {
+				//如果T节点的儿子之一是红色的。case A-2.在这种情况下，又可以分为两种情况
+				//如果P，T，R形成了一字形，只需要一次单旋转+重上色即可。
+				//如果P,T,R形成了之字形，那么需要一次双旋转+重上色才行。
+				//可以复用插入例程的rotate
+				//获取brother节点中的红节点
+				Node<T> redNodeWithBrother = brother.left.color == RED ? brother.left : brother.right;
+				//由于是根据T节点的情况来进行
+				grand = rotate(redNodeWithBrother.element, grand);
+				//再根据R，T，P形成的路径来进行重新上色
+				recolor(father, brother, redNodeWithBrother,current);
+				
+				//TEST
+				this.printTree();
+			}
+		}
+		else {
+			//情况B，先调到下一轮。
+			return;
+		}
+		
+	}
+	
+	
+	/**
+	 * case A-2下旋转后的重新上色处理。根据P，T，R（redredNodeWithBrother）形成的路径形状判断。
+	 * 通过观察可知，当路径为之字形时，只用改变X和P即可
+	 * 当路径为一字形，则需要翻转全部节点的颜色（P，T，X，R）
+	 * 
+	 * @param father
+	 * @param brother
+	 * @param redNodeWithBrother
+	 * @param current
+	 */
+	private void recolor(Node<T> father, Node<T> brother, Node<T> redNodeWithBrother, Node<T> current) {
+		//判断路径的形状，这里可以使用异或判断左右关系是否相同
+		if((compare(brother.element, father) < 0) ^ (compare(redNodeWithBrother.element, brother) < 0)) {
+			//之字形
+			current.color = RED;
+			father.color = BLACK;
+		}
+		else {
+			//一字形
+			current.color = RED;
+			brother.color = RED;
+			father.color = BLACK;
+			redNodeWithBrother.color = BLACK;
+		}
+	}
+
+	/**
+	 * 判断当前节点是否有两个黑色的儿子。
+	 * 值得注意的是，这里的儿子也包括null节点，也就是说如果当前节点是树叶，那么一定会返回true
+	 * @param current2
+	 * @return
+	 */
+	private boolean hasTowBlackChild(Node<T> current) {
+		return current.left.color == BLACK && current.right.color == BLACK;
+	}
 }
+
 

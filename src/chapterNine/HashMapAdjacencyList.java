@@ -39,6 +39,7 @@ public class HashMapAdjacencyList<T> {
 		graph.builtAdjacency("v6", new String[] {}, new int[] {});
 		graph.builtAdjacency("v7", new String[] {"v6"}, new int[] {1});
 		*/
+		/*有权无圈图的测试数据
 		graph.builtAdjacency("v1", new String[] {"v2","v4"}, new int[] {2,1});
 		graph.builtAdjacency("v2", new String[] {"v4","v5"}, new int[] {3,10});
 		graph.builtAdjacency("v3", new String[] {"v1","v6"}, new int[] {4,5});
@@ -46,10 +47,37 @@ public class HashMapAdjacencyList<T> {
 		graph.builtAdjacency("v5", new String[] {"v7"}, new int[] {6});
 		graph.builtAdjacency("v6", new String[] {}, new int[] {});
 		graph.builtAdjacency("v7", new String[] {"v6"}, new int[] {1});
+		*/
+		/*割点测试数据
+		graph.builtAdjacency("A", new String[] {"B","D"},new int[] {1,1});
+		graph.builtAdjacency("B", new String[] {"A","C"},new int[] {1,1});
+		graph.builtAdjacency("C", new String[] {"B","D","G"},new int[] {1,1,1});
+		graph.builtAdjacency("D", new String[] {"A","C","E","F"},new int[] {1,1,1,1});
+		graph.builtAdjacency("E", new String[] {"D","F"},new int[] {1,1});
+		graph.builtAdjacency("F", new String[] {"D","E"},new int[] {1,1});
+		graph.builtAdjacency("G", new String[] {"C"},new int[] {1});
+		*/
+		graph.builtAdjacency("start", new String[] {"A","B"},new int[] {3, 2});
+		graph.builtAdjacency("A", new String[] {"C","D"},new int[] {3, 2});
+		graph.builtAdjacency("B", new String[] {"D","E"},new int[] {2, 1});
+		graph.builtAdjacency("C", new String[] {"F"},new int[] {3});
+		graph.builtAdjacency("D", new String[] {"F","G"},new int[] {3, 2});
+		graph.builtAdjacency("E", new String[] {"G","K"},new int[] {2, 4});
+		graph.builtAdjacency("F", new String[] {"H"},new int[] {1});
+		graph.builtAdjacency("G", new String[] {"H"},new int[] {1});
+		graph.builtAdjacency("H", new String[] {"end"},new int[] {1});
+		graph.builtAdjacency("K", new String[] {"H"},new int[] {1});
+		graph.builtAdjacency("end", new String[] {},new int[] {});
 		//System.out.println(graph.toString());
 		//System.out.println(graph.breathFirstSearch("v3", "v7"));
 		//System.out.println(graph.getShortestPathWithWeightedGraph("v3", "v5"));
 		//System.out.println(graph.inDegree("v4"));
+		//graph.depthFirstSearchAndShowPath("v1");
+		//graph.findArt("A");
+		graph.criticalPathAnalysis("start","end");
+		
+		
+		
 	}
 	
 	//属性存储一个HashMap
@@ -204,7 +232,7 @@ public class HashMapAdjacencyList<T> {
 	 */
 	public List<Edge<T>> getShortestPathWithWeightedGraph(T startVetex, T endVetex){
 		/**
-		 * 方法内部类，仅用于贪婪算法的
+		 * 方法内部类
 		 * @author 25040
 		 *
 		 */
@@ -337,6 +365,412 @@ public class HashMapAdjacencyList<T> {
 		OneVetexAdjacencyList<T> thisList = this.map.get(x);
 		return thisList.getAdjacencyVetexList().size();
 	}
+	
+	/**
+	 * 使用深度优先搜索的方式搜索某个节点，并且返回搜索路径。
+	 * 为了实现书中每个节点有个visited数据域。为了将他方便的集成，
+	 * 我们在方法内部建立一个map<T,boolean>这样的hashMap来实现对各节点的访问标记。
+	 * 虽然现在看上去这个例程还没有什么实际的用处和意义，书上后面应该会讲。
+	 * 
+	 * @param startVetex
+	 * @return
+	 */
+	public void depthFirstSearchAndShowPath(T startVetex) {
+		HashMap<T,Boolean> visited = new HashMap<>();
+		//将map初始化为全false
+		for(T key:this.map.keySet()) {
+			visited.put(key, false);
+		}
+		
+		dps(visited, startVetex);
+	}
+	
+	/**
+	 * 私有的递归的深度优先搜索例程。
+	 * @param visited
+	 * @param x
+	 */
+	private void dps(HashMap<T,Boolean> visited, T x) {
+		//将当前节点的访问标记置为true
+		visited.put(x, true);
+		
+		//bug 1 遍历当前节点的邻接表，而不是遍历所有节点
+		//获取对应顶点的邻接表
+		LinkedList<Edge<T>> adjVetexList = this.map.get(x).getAdjacencyVetexList();
+			
+		//遍历所有的边。即所有的顶点
+		for (Edge<T> edge : adjVetexList) {
+			//检查判断该店是否已经被访问过了
+			T nowAdjNode = edge.getNextVetex();
+			if(! visited.get(nowAdjNode)) {
+				//递归进入邻接点的深度优先搜索
+				System.out.print(nowAdjNode);
+				dps(visited, nowAdjNode);
+			}
+		}
+		//test
+		System.out.println();
+	}
+	
+	/*
+	 * 为了完成割点的寻找，需要在每个添加额外的数据域。我们使用hashMap<T,additionalInfo>的形式来存储。
+	 * additionalInfo的信息以方法内部类的形式来存储。
+	 */
+	private class ArtInfo{
+		int num;//搜索编号
+		int low;//当前节点所能达到的最低节点
+		T parent;
+		boolean visited;
+		
+		public ArtInfo(int num, int low, T parent, boolean visited) {
+			super();
+			this.num = num;
+			this.low = low;
+			this.parent = parent;
+			this.visited = visited;
+		}
+	}
+	/*
+	 * 为了给深度优先生成树的节点编号，需要一个类变量来记录
+	 */
+	private int count;
+	
+	/**
+	 * 使用深度优先搜索来检查无向图中的割点
+	 * 还未进行起点是否是割点的特殊判断
+	 * @param startNode 深度优先开始的起点
+	 */
+	public void findArt(T startNode) {
+		//初始化额外添加数据域的HashMap
+		HashMap<T, ArtInfo> addInfo = new HashMap<>();
+		for(T key : this.map.keySet()) {
+			addInfo.put(key, new ArtInfo(0, 0, null, false));
+		}
+		count = 0;
+		assignNum(startNode, addInfo);
+		//重置所有节点的访问标志 bug 1
+		for(T key : this.map.keySet()) {
+			ArtInfo nodeInfo = addInfo.get(key);
+			nodeInfo.visited = false;
+		}
+		//bug 2 将A的parent置为本身
+		ArtInfo startInfo = addInfo.get(startNode);
+		startInfo.parent = startNode;
+		//再进行low的深度优先搜索设置，
+		assignLow(startNode, addInfo);
+	}
+	
+	/**
+	 * 还是以深度优先搜索的方式递归的遍历所有的节点。
+	 * 1. 通过判断节点visited数据域来避免重复。
+	 * 2. 通过判断当前节点v和邻接点w的num数据域可以得知当前的边是前向边，还是背向边。
+	 * 	   2.1 当w.num > v.num && w.visited时，为前向边.
+	 * 	   2.2 当w.num < v.nums时，并且当v.parent == w时，为已经处理过需要忽略的边，并且当v.parent != w 时，就是背向边了。
+	 * 3. 在2.1中即前向边的情况下，根据深度优先的思想，直接递归到下一节点，然后递归完成后，判断w.low >= v.num说明v为割点。
+	 *    可以画出深度优先生成树来理解，>=代表的深度更深，如果邻接点的能达到的最低深度都等于当前节点，那么当前节点一定时割点。
+	 *    大于的话，说明还有其他割点。最后，更新当前节点的low值。由于深度优先搜索的关系，较小的low值会从深度较深的地方，一直向上更新。
+	 *    因此，min(w.low, v.low)即可。
+	 * 4.而在2.2中，背向边的情况，只需要把当前节点low值更新好就行。即v.low = min(v.low, w.num)
+	 * 
+	 * 值得注意的是，当判断搜索起始点是否是割点，不能使用上诉条件，需要加上一条。
+	 * 即深度优先搜索树的根节点有一个以上的儿子（两个及以上），则它是割点。因为，如果这两个儿子如果能够通过其他路径到达对方。
+	 * 那么一定不可能需要返回到A来转移。说明两儿子之间必须通过根节点联通，这种情况下根节点就是割点。
+	 * 再次遍历根节点的邻接表，查看邻接点的parent,如果parent = root的邻接点数目>1，那么根节点为割点，否则就不是
+	 * 
+	 * @param v
+	 * @param addInfo
+	 */
+	private void assignLow(T v, HashMap<T, ArtInfo> addInfo) {
+		//首先，二话不说先初始化下当前节点low值
+		ArtInfo vInfo = addInfo.get(v);
+		if(vInfo.num == 0) {
+			throw new IllegalArgumentException("请先对各节点进行深度优先搜索编号！");
+		}
+		vInfo.low = vInfo.num;
+		//bug 3 又Tm忘记置未被访问标志了
+		vInfo.visited = true;
+		//遍历当前节点的邻接表
+		LinkedList<Edge<T>> adjList = this.map.get(v).getAdjacencyVetexList();
+		for (Edge<T> edge : adjList) {
+			//获取邻接点的名字
+			T w = edge.getNextVetex();
+			//获取邻接点的信息
+			ArtInfo adjInfo = addInfo.get(w);
+			//前向边的情况，在书上伪代码的基础上，添加了对visited数据域的检查。
+			if(!adjInfo.visited && adjInfo.num > vInfo.num) {
+				//深度优先搜索递归
+				assignLow(w, addInfo);
+				//更新当前节点的low值
+				vInfo.low = Math.min(adjInfo.low, vInfo.low);
+				//递归搜索完成后判断当前节点是否是割点
+				if(adjInfo.low >= vInfo.num) {
+					//当v是根节点的时候，需要进行特殊的测试
+					if(v.equals(vInfo.parent)) {
+						int cnt = 0;
+						for(Edge<T> twiceEdge : adjList) {
+							if(addInfo.get(twiceEdge.getNextVetex()).parent.equals(v)) {
+								++cnt;
+							}
+						}
+						if(cnt <= 1) {
+							continue;
+						}
+					}
+					
+					System.out.println("割点：" + v);
+				}
+			}
+			else {
+				//判断是否是背向边，注意到背向边的w节点是已经访问过的
+				//如果当前节点的父亲等于邻接表，那么代表这条边已经背访问过了。不需要反向重复操作
+				//bug 2 对null调用eqaul方法，将起点的parent置为它本身
+				if(! vInfo.parent.equals(w)) {
+					vInfo.low = Math.min(vInfo.low, adjInfo.num);
+				}
+			}
+		}
+	}
+
+	/**
+	 * 以深度优先搜索的方式递归给深度优先搜索生成树的相关节点编号。
+	 * 用于推断计算无向图中的割点。
+	 * 
+	 * 思路和步骤：
+	 * 1. 遍历当前节点的邻接表。
+	 * 2. 当v.visited标志为false时，把当前节点的num数据域赋值编号（编号数值的大小代表该节点在生成树的深度。）否则跳过该邻接点。
+	 * 3. 将1，2步骤递归到该邻接点上。
+	 * 
+	 * @param x
+	 * @param additionalInfo
+	 */
+	private void assignNum(T x, HashMap<T, ArtInfo> addInfo) {
+		ArtInfo thisVetexInfo = addInfo.get(x);
+		thisVetexInfo.num = ++count;
+		thisVetexInfo.visited = true;//bug 1 忘记给当前节点设置被访问标志了。
+		//遍历该节点的邻接表，跟广度不一样，深度是递归例程，广度是迭代例程不一样
+		//获取对应顶点的邻接表
+		LinkedList<Edge<T>> adjVetexList = this.map.get(x).getAdjacencyVetexList();
+		for (Edge<T> edge : adjVetexList) {
+			//获取边对象对应的节点
+			T adjVetex = edge.getNextVetex();
+			//检查该节点的访问标记
+			if(!addInfo.get(adjVetex).visited) {
+				//获取当前邻接点相关信息。
+				ArtInfo adjVetexInfo = addInfo.get(adjVetex);
+				//记住父节点的路径信息。
+				adjVetexInfo.parent = x;
+				//以深度优先搜索的方式往下继续编号。
+				assignNum(adjVetex, addInfo);
+			}
+		}
+	}
+	
+	/**
+	 * 同计算最短路径的算法一样，使用方法内部类 + HashMap 的方式向节点上添加额外信息。
+	 * 
+	 * EC:保存当前节点的最早完成事件
+	 * LC:保存当前节点可以拖延的最大事件。
+	 * visited:已访问标志
+	 * allPreNode:链表，保存当前节点所有的前置节点。
+	 * 
+	 * @author 25040
+	 *
+	 */
+	private class CriticalPathInfo {
+		int EC;//
+		int LC;
+		int ST;
+		boolean visited;
+		LinkedList<T> allPreNode;//相当于构建了该图的反向邻接表
+		
+		public CriticalPathInfo(int eC, int lC, int ST, boolean visited) {
+			super();
+			EC = eC;
+			LC = lC;
+			this.ST = ST;
+			this.visited = visited;
+			this.allPreNode = new LinkedList<>();
+		}
+		
+		public void addPreNode(T preNode) {
+			this.allPreNode.addLast(preNode);
+		}
+	}
+	
+	/**
+	 * 从起点开始进行关键路径分析。
+	 * 请务必确保当前对象的图是有权有向无圈图，才可保证计算的正确性。
+	 * 同时，该函数会将该图当成动作节点图来处理。请注意务必添加开始和结束节点。
+	 * 
+	 * 当前函数通过广度优先搜索的方式，使用队列来层层递进的进行计算。
+	 * 所有节点的最早完成时间原理。公式和思路：
+	 * 基本原理：
+	 * EC_1 = 0；
+	 * EC_i	= max{EC_w + weight_w,v};
+	 * 上诉表达式就是说当前节点最早完成时间，由所有（前置节点的最早完成时间 + 前置节点到当前节点的权值）的最大值决定。
+	 * 
+	 * 设E为当前事件节点最早完成事件
+	 * 
+	 * 思路和基本步骤：
+	 * 1. 初始化所需变量，将起点的E置为0；
+	 * 2. 遍历当节点的邻接点，应用计算公式EC_w = Ec_v + edge_weight,如果计算得到的结果比该邻接点已经存储的值大，则更新。否则不更新。
+	 * 3. 将未访问过的邻接点入队。
+	 * 
+	 * 所有节点的最大拖延时间计算原理和公式：
+	 * 基本原理和公式：
+	 * EL_n = EC_n;
+	 * LC_v = min(LC_w - c_v,w);
+	 * 
+	 * 上述表达式通俗的说，就是说当前节点的最大拖延时间，是所有（后置节点的最早完成时间 - 后置节点到当前节点的权值）的最小值决定
+	 * 
+	 * 思路和步骤：（跟上面及其类似）
+	 * 1.初始化所需变量，将尾点的LC值置为该地的EC值。
+	 * 2.遍历当前节点的前置邻接表，应用计算公式EC_pre = Ec_v - edge_weight,如果计算得到的结果比该邻接点已经存储的值小，则更新。否则不更新。
+	 *   同时利用公式ST_pre = LC_v - E_pre - weight,更新当前时间的最大拖延时间。
+	 * 3. 将未访问过的节点入队。
+	 * 
+	 * 后期都写个检查函数，确保用户插入的邻接点，都有对应的节点存储。
+	 * 
+	 * @param startVetex
+	 */
+	public void criticalPathAnalysis(T startVetex, T endVetex) {
+		//防止zz
+		if((this.map.get(startVetex) == null) || (this.map.get(endVetex)) == null) {
+			System.out.println("请正确输入起点和结束点");
+			return;
+		}
+		//使用一个linkedList来当作队列使用
+		LinkedList<T> queue = new LinkedList<>();
+		HashMap<T, CriticalPathInfo> InfoMap = new HashMap<>();
+		
+		assignEC(queue, InfoMap, startVetex);
+		assignLCAndST(queue, InfoMap, endVetex);
+		
+		//test output
+		for(T x : this.map.keySet()) {
+			if(x.equals(startVetex) || x.equals(endVetex)) {
+				continue;
+			}
+			System.out.println("事件：" + x + "\t最早完成时间为：\t" + InfoMap.get(x).EC + 
+					"\t不拖延进度的情况下最晚完成时间：\t" + InfoMap.get(x).LC + 
+					"\t\t事件可以拖延的时间为:\t" + InfoMap.get(x).ST);
+		}
+	}
+	
+	/**
+	 * 利用info中的allPreNode和EC，使用反向广度优先搜索的方式更新各时间节点的LC和ST值
+	 * 即不拖延整体进度的情况下，各时间的最晚完成时间和各时间的弹性时间（即最大拖延时间）。
+	 * @param queue
+	 * @param InfoMap
+	 * @param endVetex
+	 */
+	private void assignLCAndST(LinkedList<T> queue, HashMap<T, CriticalPathInfo> InfoMap, T endVetex) {
+		//把尾节点的LC值设为En值
+		CriticalPathInfo endVInfo = InfoMap.get(endVetex);
+		endVInfo.LC = endVInfo.EC;
+		
+		//利用Info的allPreNode，反向广度优先搜索，得到所有事件的最大拖延时间
+		queue.addLast(endVetex);
+		while(! queue.isEmpty()) {
+			//获取当前节点对象及其信息,并且标记已访问
+			T vNode = queue.removeFirst();
+			CriticalPathInfo vInfo = InfoMap.get(vNode);
+			//注意上一轮正向广度优先搜索将访问过的节点设置为true表明已经访问过了
+			//这一轮就将它设置为false表明已经访问过了
+			vInfo.visited = false;
+			
+			//遍历当前节点的前置邻接表
+			LinkedList<T>  preAdjList = InfoMap.get(vNode).allPreNode;
+			for (T preNode : preAdjList) {
+				//获取当前前置邻接点附加数据域
+				CriticalPathInfo preInfo = InfoMap.get(preNode);
+				//获取当前 前置邻接点到该节点的边权值,这一波操作，耗费了线性时间，以后看能否改进
+				int weight = 0;
+				LinkedList<Edge<T>> temp = this.map.get(preNode).getAdjacencyVetexList();
+				for (Edge<T> edge : temp) {
+					if(edge.getNextVetex().equals(vNode)) {
+						weight = edge.getWeight();
+					}
+				}
+				
+				//判断公式条件，更新LC数据域,如果公式计算结果比现存的LC更小，则保存
+				//与此同时，我们还可以算出当前事件的最大拖延事件
+				if(vInfo.LC - weight < preInfo.LC) {
+					preInfo.LC = vInfo.LC - weight;
+					preInfo.ST = vInfo.LC - preInfo.EC - weight;
+				}
+				
+				//将还未访问的前置节点入队,注意这一轮就将它设置为false表明已经访问过了
+				//bug 2 前置邻接表有点混乱，写成vInfo
+				if(preInfo.visited) {
+					queue.addLast(preNode);
+				}
+			}
+		}
+		// TODO Auto-generated method stub
+		
+	}
+	
+	/**
+	 * 使用广度优先搜素的方式来计算各节点的EC值，即当前动作完成的最早时间
+	 * @param queue
+	 * @param InfoMap
+	 * @param startVetex
+	 */
+	private void assignEC(LinkedList<T> queue, HashMap<T, CriticalPathInfo> InfoMap, T startVetex) {
+		//初始化变量
+		queue.addLast(startVetex);
+		for(T vetex : this.map.keySet()) {
+			InfoMap.put(vetex, new CriticalPathInfo(0, Integer.MAX_VALUE, 0, false));
+		}
+		
+		//广度优先搜索，得到所有检查的最短完成事件。其实相当于遍历了所有的边
+		while(! queue.isEmpty()) {
+			//获取当前节点对象及其信息,并且标记已访问
+			T vNode = queue.removeFirst();
+			CriticalPathInfo vInfo = InfoMap.get(vNode);
+			vInfo.visited = true;
+			
+			//遍历当前节点的邻接表
+			LinkedList<Edge<T>> adjList = this.map.get(vNode).getAdjacencyVetexList();
+			for (Edge<T> edge : adjList) {
+				//获取当前的邻接点,边权值和邻接点的附加数据域
+				T adjw = edge.getNextVetex();
+				int weight = edge.getWeight();
+				CriticalPathInfo wInfo = InfoMap.get(adjw);
+				
+				//判断并且更新邻接点的EC数据域
+				if(vInfo.EC + weight > wInfo.EC) {
+					wInfo.EC = vInfo.EC + weight;
+				}
+				
+				//对未访问过的邻接点压入队列中
+				if(! wInfo.visited) {
+					queue.addLast(adjw);
+				}
+				
+				//把当前节点插入到该邻接点的allPreNode链表中，用于后续的计算
+				wInfo.addPreNode(vNode);
+			}
+		}
+		
+	}
+	
+	/**
+	 * 把当前对象中的有权无圈图当成动作节点图，建立对应的时间节点图。
+	 * 并且打印显示出对应的事件节点图
+	 * 
+	 * 步骤2这样做的原因书中原话：在一个动作依赖于多个前置动作的情况下，可能需要插入哑边和哑节点来避免引进假相关性的概念。
+	 * 
+	 * 思路步骤：
+	 * 1. 计算所有节点入度，并且将入度大于1的节点，记录在一个map<T, boolean>中
+	 * 2. 返回map的size，用于生成的图的总节点数。
+	 * 3. 从起点开始，遍历每一个节点的邻接表。即遍历原图中所有的边。思路还是广度优先搜索那套,使用一个queue来完成。
+	 * @return
+	 */
+	public HashMapAdjacencyList<T> bulitEventNodeGraph(){
+		return null;
+	}
 }
 
 /**
@@ -348,6 +782,9 @@ public class HashMapAdjacencyList<T> {
  */
 class OneVetexAdjacencyList<T>{
 	//邻接表的自身顶点的属性
+	/*
+	 * 这个数据域确实在使用hashMap的时候没点用处。
+	 */
 	private T self;
 	//邻接表中右self指向的所有邻接点,使用HashMap后，我们就不需要跟早
 	private LinkedList<Edge<T>> edges;
@@ -479,7 +916,5 @@ class Edge<T>{
 	public String toString() {
 		return (nextVetex +"("+ weight +")"); 
 	}
-	
-	
 }
 

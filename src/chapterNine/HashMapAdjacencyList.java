@@ -1,8 +1,10 @@
 package chapterNine;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map.Entry;
 
 /**
@@ -57,6 +59,7 @@ public class HashMapAdjacencyList<T> {
 		graph.builtAdjacency("F", new String[] {"D","E"},new int[] {1,1});
 		graph.builtAdjacency("G", new String[] {"C"},new int[] {1});
 		*/
+		/*关键路径分析数据
 		graph.builtAdjacency("start", new String[] {"A","B"},new int[] {3, 2});
 		graph.builtAdjacency("A", new String[] {"C","D"},new int[] {3, 2});
 		graph.builtAdjacency("B", new String[] {"D","E"},new int[] {2, 1});
@@ -68,15 +71,38 @@ public class HashMapAdjacencyList<T> {
 		graph.builtAdjacency("H", new String[] {"end"},new int[] {1});
 		graph.builtAdjacency("K", new String[] {"H"},new int[] {1});
 		graph.builtAdjacency("end", new String[] {},new int[] {});
+		*/
+		/*欧拉环游的测试数据1
+		graph.builtAdjacency("A", new String[] {"B","C"},new int[] {1,1});
+		graph.builtAdjacency("B", new String[] {"A","C","D","G"},new int[] {1,1,1,1});
+		graph.builtAdjacency("C", new String[] {"A","B","E","G"},new int[] {1,1,1,1});
+		graph.builtAdjacency("D", new String[] {"B","E","F","G"},new int[] {1,1,1,1});
+		graph.builtAdjacency("E", new String[] {"C","D","F","G"},new int[] {1,1,1,1});
+		graph.builtAdjacency("F", new String[] {"D","E"},new int[] {1,1});
+		graph.builtAdjacency("G", new String[] {"B","C","D","E"},new int[] {1,1,1,1});
+		*/
+		
+		graph.builtAdjacency("1", new String[] {"3","4"},new int[] {1,1});
+		graph.builtAdjacency("2", new String[] {"3","8"},new int[] {1,1});
+		graph.builtAdjacency("3", new String[] {"1","2","4","6","7","9"},new int[] {1,1,1,1,1,1});
+		graph.builtAdjacency("4", new String[] {"1","3","5","7","10","11"},new int[] {1,1,1,1,1,1});
+		graph.builtAdjacency("5", new String[] {"4","10"},new int[] {1,1});
+		graph.builtAdjacency("6", new String[] {"3","9"},new int[] {1,1});
+		graph.builtAdjacency("7", new String[] {"3","4","9","10"},new int[] {1,1,1,1});
+		graph.builtAdjacency("8", new String[] {"2","9"},new int[] {1,1});
+		graph.builtAdjacency("9", new String[] {"3","6","7","8","10","12"},new int[] {1,1,1,1,1,1});
+		graph.builtAdjacency("10", new String[] {"4","5","7","9","11","12"},new int[] {1,1,1,1,1,1});
+		graph.builtAdjacency("11", new String[] {"4","10"},new int[] {1,1});
+		graph.builtAdjacency("12", new String[] {"9","10"},new int[] {1,1});
 		//System.out.println(graph.toString());
 		//System.out.println(graph.breathFirstSearch("v3", "v7"));
 		//System.out.println(graph.getShortestPathWithWeightedGraph("v3", "v5"));
 		//System.out.println(graph.inDegree("v4"));
 		//graph.depthFirstSearchAndShowPath("v1");
 		//graph.findArt("A");
-		graph.criticalPathAnalysis("start","end");
+		//graph.criticalPathAnalysis("start","end");
 		
-		
+		graph.eularTour("5");
 		
 	}
 	
@@ -707,7 +733,6 @@ public class HashMapAdjacencyList<T> {
 				}
 			}
 		}
-		// TODO Auto-generated method stub
 		
 	}
 	
@@ -757,6 +782,8 @@ public class HashMapAdjacencyList<T> {
 	}
 	
 	/**
+	 * 这里感觉不再需要了，现在的程序可以直接根据输入的动作节点图输出关键路径分析
+	 * 
 	 * 把当前对象中的有权无圈图当成动作节点图，建立对应的时间节点图。
 	 * 并且打印显示出对应的事件节点图
 	 * 
@@ -770,6 +797,245 @@ public class HashMapAdjacencyList<T> {
 	 */
 	public HashMapAdjacencyList<T> bulitEventNodeGraph(){
 		return null;
+	}
+	
+	/**
+	 * 用于在欧拉环游中，为了便于对访问过的边进行标记。
+	 * 其针对的问题就是，边<2,3>与边<3,2>中在无向图中是等价的。
+	 * 而在欧拉环游中，这两个在不同的邻接表中，不太好表示。
+	 * 同时改变邻接表的本来结构。
+	 * 
+	 * @author 25040
+	 *
+	 * @param <T>
+	 */
+	private class EdgeUsingInEularTour<T>{
+		T v1;
+		T v2;
+		
+		public EdgeUsingInEularTour(T v1, T v2) {
+			super();
+			this.v1 = v1;
+			this.v2 = v2;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((v1 == null) ? 0 : v1.hashCode());
+			result = prime * result + ((v2 == null) ? 0 : v2.hashCode());
+			return result;
+		}
+		
+		/**
+		 * 必须要重新定义equals和hashcode让哈希表能够正确判断两个边是否相等
+		 */
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			EdgeUsingInEularTour other = (EdgeUsingInEularTour) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (v1 == null) {
+				if (other.v1 != null)
+					return false;
+			} else if (!v1.equals(other.v1))
+				return false;
+			if (v2 == null) {
+				if (other.v2 != null)
+					return false;
+			} else if (!v2.equals(other.v2))
+				return false;
+			return true;
+		}
+
+		private HashMapAdjacencyList getOuterType() {
+			return HashMapAdjacencyList.this;
+		}
+		
+		
+	}
+	
+	/**
+	 * 对无权无向图的欧拉环游分析。
+	 * 
+	 * 
+	 * 
+	 * 基本思路和步骤：
+	 * 1. 从用户指定的起点开始，进行深度优先搜索。并且对访问过的边进行标记。
+	 * 2. 直到重新访问到了圈起点，这样深度优先搜索访问过的边形成了一个圈。这样形成了一条子路径。
+	 * 	   我们用链表来保存这个圈。
+	 * 3. 我们取出上述链表的倒数第二个节点，再次进行深度优先搜索，注意。不能重复访问标记了的边。
+	 *    然后把这次深度优先搜索访问形成的圈，插入上面哪个链表中。我感觉可以使用iterator.add方法来完成
+	 * 4.重复1 - 3步骤，直到所有的边都访问过了。
+	 * 
+	 * 一个问题是：如何保存一条边已经访问过这个信息。
+	 * 
+	 * 第二个想法，干脆重建一个无权邻接表算了。使用上诉哈希表貌似更加麻烦
+	 * 
+	 * @param startVetex 开始进行欧拉回路分析的起点。
+	 */
+	public void eularTour(T startVetex) {
+		
+		if(!checkHasEularTour()) {
+			System.out.println("该图不存在欧拉环游！");
+			return;
+		}
+		
+		//用链表来储存结果路径
+		LinkedList<T> resultPath = new LinkedList<>();
+		//为了便于拼接路径，我们使用迭代器来管理
+		ListIterator<T> iter = resultPath.listIterator();
+		//用于标记各无向边是否已经被访问过了
+		HashMap<EdgeUsingInEularTour<T>,Boolean> allEdgeIsVisited = new HashMap<>();
+		//定义一个计数器，用于记录当前图中还有几条边为未被访问
+		int edgesUnvisited;
+		
+		//初始化各变量
+		//遍历邻接表，将所有边都插入到用于保存边访问状态的哈希表中
+		for(T x: this.map.keySet()) {
+			//获取该节点对应的邻接表
+			LinkedList<Edge<T>> adjList = this.map.get(x).getAdjacencyVetexList();
+			//遍历邻接表中所有的有权边
+			for(Edge<T> edge : adjList) {
+				//将所有有向边都放入visitedMap中，注意在后续处理中，访问后标记需要同时置两条边都为true
+				allEdgeIsVisited.put(new EdgeUsingInEularTour<T>(x, edge.getNextVetex()), false);
+			}
+		}
+		//初始化其他变量
+		//获取全图边的条数
+		edgesUnvisited = allEdgeIsVisited.size();
+		//先插入起点
+		iter.add(startVetex);
+		T nextStrat = startVetex;
+		//反复进行深度优先搜索，直到遍历所有的边
+		while((resultPath.size() - 1) != edgesUnvisited / 2) {
+			//重新设置迭代器，使他指向正确的位置，保证拼接路径的正确性，同时寻找下一个深度优先搜索的起始点
+			nextStrat = iter.previous();
+			//bug 4 这里的逻辑应该是当被测节点没有其他可见边的时候，迭代器向前移动
+			while(! hasUnvisitedEdege(nextStrat, allEdgeIsVisited)) {
+				nextStrat = iter.previous();
+			}
+			//由于在深度优先搜索中，一开始就会插入一个该圈的起点，所有需要删除这个寻找点，这样才不会重复插入
+			iter.remove();
+			//欧拉环游的深度优先搜索
+			eularTourDps(nextStrat, null, allEdgeIsVisited, nextStrat, iter);
+		}
+		System.out.println(resultPath);
+		
+	}
+	
+	/**
+	 * 检查当前图是否有欧拉环游。
+	 * 无论是有权图还是无权图都可以欧拉环游。
+	 * 即检查当前图中所有的邻接表的size都为偶数，这样就可以保证每个点的出度和入度都为偶数
+	 * @return
+	 */
+	private boolean checkHasEularTour() {
+		//遍历图中所有的节点
+		for(T vetex : this.map.keySet()) {
+			//遍历当前节点的邻接表
+			LinkedList<Edge<T>> adjList = this.map.get(vetex).getAdjacencyVetexList();
+			if(adjList.size() % 2 != 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * 用于深度优先搜索的递归例程。同时在递归的过程中对访问过的边机型标记，并且插入到结果中
+	 * 
+	 * @param Vetex             深度优先搜索的当前节点
+	 * @param lastVetex         用于记录上个节点，这样可以防止在深度优先搜索时，回溯的问题。
+	 * 							之前是因为可以通过节点visited数据域来控制它不会这样。
+	 * @param allEdgeIsVisited  记录着边是否被访问的哈希表
+	 * @param resultPath        用于记录搜索路径的链表
+	 * @param startVetex        本次搜索的起点，用于判断是否形成了一个圈。
+	 * @param iter              结果链表中的迭代器，记录深度优先搜索的路径
+	 */
+	private void eularTourDps(T Vetex, T lastVetex, HashMap<EdgeUsingInEularTour<T>, Boolean> allEdgeIsVisited,
+			T startVetex, ListIterator<T> iter) {
+		//将当前节点插入路径中
+		iter.add(Vetex);
+		//为了保证插入到链表的末尾，需要next一下
+		//iter.next();
+		
+		//获取当前节点的邻接表
+		LinkedList<Edge<T>> adjList = this.map.get(Vetex).getAdjacencyVetexList();
+		
+		//初始化各变量,
+		for(Edge<T> edge : adjList) {
+			//获取邻接点
+			T adjV = edge.getNextVetex();
+			
+			/*
+			 * //判断当前邻接点是否还有未访问的边，如果有，则递归到它进行深度优先搜索
+			//bug 2 直接A-B-A回来了。。。必须保证不能回访，即
+			//bug 5 不仅仅要深度优先搜索的下一个邻接点是否有未访问的边，同时，还应该判断从当前点是否有为访问的边能到邻接点
+			//防止它往上个过来的节点直接回去了，即避免形成A-B-A这种圈
+			//&& hasUnvisitedEdege(adjV, allEdgeIsVisited)) {这个条件判断是多余的，因为只要它能够有路径到达下一个邻接点，
+			//由于在前面已经检查了所有节点的度为偶数，所以，能进一定能出
+			 * 
+			 */
+			if(! allEdgeIsVisited.get(new EdgeUsingInEularTour<T>(Vetex, adjV)) && !adjV.equals(lastVetex)) {
+				//将该边置为已访问
+				updateVisitedMap(Vetex, adjV, allEdgeIsVisited);
+				//基准情形，如果形成了一个圈，即深度优先搜索回到了起点，那么就结束递归
+				if(adjV.equals(startVetex)) {
+					//最后再插入一次，直接返回
+					iter.add(adjV);
+					break;
+				}
+				eularTourDps(adjV, Vetex, allEdgeIsVisited, startVetex, iter);
+				//bug 3 形成一个圈后，比如A-B-C-A，它会回到C节点，遍历邻接表，寻找下一个开始深度优先搜索的节点
+				//所以，找到一个完整的圈后，直接break退出循环。
+				break;
+			}
+			
+		}
+	}
+	
+	/**
+	 * 更新已访问边的哈希表，将当前访问边置为true。
+	 * 注意，双向都要置为true
+	 * @param vetex
+	 * @param adjV
+	 * @param allEdgeIsVisited
+	 */
+	private void updateVisitedMap(T vetex, T adjV,
+			HashMap<HashMapAdjacencyList<T>.EdgeUsingInEularTour<T>, Boolean> allEdgeIsVisited) {
+		//bug 1 写成了false，弱智了
+		allEdgeIsVisited.put(new EdgeUsingInEularTour<>(vetex, adjV), true);
+		allEdgeIsVisited.put(new EdgeUsingInEularTour<>(adjV, vetex), true);
+	}
+
+	/**
+	 * 判断当前该节点的邻接表中是否还有未访问的边
+	 * 
+	 * @param adjV
+	 * @return
+	 */
+	private boolean hasUnvisitedEdege(T adjV,HashMap<EdgeUsingInEularTour<T>, Boolean> allEdgeIsVisited) {
+		//获取邻接表
+		LinkedList<Edge<T>> adjList = this.map.get(adjV).getAdjacencyVetexList();
+		//遍历邻接表
+		for (Edge<T> edge : adjList) {
+			//新建一各暂存量，用于判断邻接表是否还有未访问的边
+			EdgeUsingInEularTour<T> eularEdge = new EdgeUsingInEularTour<>(adjV, edge.getNextVetex());
+			//有一条边未访问，就返回true
+			if(!allEdgeIsVisited.get(eularEdge)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
 

@@ -1,11 +1,14 @@
 package chapterNine;
 
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 
 /**
  * 
@@ -81,7 +84,7 @@ public class HashMapAdjacencyList<T> {
 		graph.builtAdjacency("F", new String[] {"D","E"},new int[] {1,1});
 		graph.builtAdjacency("G", new String[] {"B","C","D","E"},new int[] {1,1,1,1});
 		*/
-		
+		/*欧拉环游的测试数据2
 		graph.builtAdjacency("1", new String[] {"3","4"},new int[] {1,1});
 		graph.builtAdjacency("2", new String[] {"3","8"},new int[] {1,1});
 		graph.builtAdjacency("3", new String[] {"1","2","4","6","7","9"},new int[] {1,1,1,1,1,1});
@@ -94,6 +97,14 @@ public class HashMapAdjacencyList<T> {
 		graph.builtAdjacency("10", new String[] {"4","5","7","9","11","12"},new int[] {1,1,1,1,1,1});
 		graph.builtAdjacency("11", new String[] {"4","10"},new int[] {1,1});
 		graph.builtAdjacency("12", new String[] {"9","10"},new int[] {1,1});
+		*/
+		graph.builtAdjacency("v1", new String[] {"v2","v3","v4"},new int[] {2,4,1});
+		graph.builtAdjacency("v2", new String[] {"v1","v4","v5"},new int[] {2,3,10});
+		graph.builtAdjacency("v3", new String[] {"v1","v4","v6"},new int[] {4,2,5});
+		graph.builtAdjacency("v4", new String[] {"v1","v2","v3","v5","v6","v7"},new int[] {1,3,2,7,8,4});
+		graph.builtAdjacency("v5", new String[] {"v2","v4","v7"},new int[] {10,7,6});
+		graph.builtAdjacency("v6", new String[] {"v3","v4","v7"},new int[] {5,8,1});
+		graph.builtAdjacency("v7", new String[] {"v4","v5","v6"},new int[] {4,6,1});
 		//System.out.println(graph.toString());
 		//System.out.println(graph.breathFirstSearch("v3", "v7"));
 		//System.out.println(graph.getShortestPathWithWeightedGraph("v3", "v5"));
@@ -101,8 +112,8 @@ public class HashMapAdjacencyList<T> {
 		//graph.depthFirstSearchAndShowPath("v1");
 		//graph.findArt("A");
 		//graph.criticalPathAnalysis("start","end");
-		
-		graph.eularTour("5");
+		//graph.eularTour("5");
+		graph.minSpanningTreeByPrim("v1");
 		
 	}
 	
@@ -238,6 +249,38 @@ public class HashMapAdjacencyList<T> {
 	}
 	
 	/**
+	 * 
+	 * 用于有权无圈图的遍历搜索路径信息的记录。
+	 * 同时，也用于Prim最小生成树的算法
+	 * 
+	 * @author 25040
+	 *
+	 */
+	private class PathInfo{
+		//标记节点是否被标记过了
+		boolean known;
+		//记录当前节点到起点的最短权值
+		int dv;
+		//用于最短路径的回溯
+		T prevNode;
+		
+		public PathInfo() {
+			this(false, Integer.MAX_VALUE, null);
+		}
+		
+		public PathInfo(boolean known, int dv, T prevNode) {
+			super();
+			this.known = known;
+			this.dv = dv;
+			this.prevNode = prevNode;
+		}
+		
+		public String toString() {
+			return ("known:" + known + ", dv:" + dv + ", pv:" + prevNode + "\n");
+		}
+	}
+	
+	/**
 	 * 使用广度优先搜索解决有权无圈图中的单源最短路径问题。莫名其妙相除的版本。
 	 * 其实是我错误地理解书上的意思，误打误撞出来的。过程根本不贪，但结果是贪婪的。
 	 * 
@@ -257,49 +300,22 @@ public class HashMapAdjacencyList<T> {
 	 * @return
 	 */
 	public List<Edge<T>> getShortestPathWithWeightedGraph(T startVetex, T endVetex){
-		/**
-		 * 方法内部类
-		 * @author 25040
-		 *
-		 */
-		class pathInfo{
-			//标记节点是否被标记过了
-			boolean known;
-			//记录当前节点到起点的最短权值
-			int dv;
-			//用于最短路径的回溯
-			T prevNode;
-			
-			public pathInfo() {
-				this(false, Integer.MAX_VALUE, null);
-			}
-			
-			public pathInfo(boolean known, int dv, T prevNode) {
-				super();
-				this.known = known;
-				this.dv = dv;
-				this.prevNode = prevNode;
-			}
-			
-			public String toString() {
-				return ("known:" + known + ", dv:" + dv + ", pv:" + prevNode + "\n");
-			}
-		}
+		
 		
 		/*
 		 * 下面正式开始进行搜索算法。 
 		 */
 		
 		//变量初始化
-		HashMap<T, pathInfo> pathMap = new HashMap<>();
+		HashMap<T, PathInfo> pathMap = new HashMap<>();
 		LinkedList<T> queue = new LinkedList<>();
 		
 		//遍历所有的邻接点，将它在table中初始化下
 		for(Entry<T,OneVetexAdjacencyList<T>> entry : this.map.entrySet()) {
-			pathMap.put(entry.getKey(), new pathInfo());
+			pathMap.put(entry.getKey(), new PathInfo());
 		}
 		//将起点设置好
-		pathMap.put(startVetex, new pathInfo(true, 0, null));
+		pathMap.put(startVetex, new PathInfo(true, 0, null));
 		
 		queue.addLast(startVetex);
 		
@@ -310,7 +326,7 @@ public class HashMapAdjacencyList<T> {
 			//获取当前的节点的邻接点的列表，并且从队列中删除它
 			T nowNode = queue.removeFirst();
 			//当前节点known状态置为true,这神级麻烦的map修改方式
-			pathInfo nowNodeInfo = pathMap.get(nowNode);
+			PathInfo nowNodeInfo = pathMap.get(nowNode);
 			nowNodeInfo.known = true;
 			
 			//获取邻接表
@@ -324,7 +340,7 @@ public class HashMapAdjacencyList<T> {
 				int weight = eachEdge.getWeight();
 				
 				//从路径信息表中取出当前邻接点对应的数据
-				pathInfo adjVetexInfo = pathMap.get(adjVetex);
+				PathInfo adjVetexInfo = pathMap.get(adjVetex);
 				//判断当前边的权值 + 当前的节点过往的总路径（权值和）是否 < 邻接点记录的值
 				//更新数据和进队分开
 				if(pathMap.get(nowNode).dv + weight < adjVetexInfo.dv) {
@@ -781,23 +797,6 @@ public class HashMapAdjacencyList<T> {
 		
 	}
 	
-	/**
-	 * 这里感觉不再需要了，现在的程序可以直接根据输入的动作节点图输出关键路径分析
-	 * 
-	 * 把当前对象中的有权无圈图当成动作节点图，建立对应的时间节点图。
-	 * 并且打印显示出对应的事件节点图
-	 * 
-	 * 步骤2这样做的原因书中原话：在一个动作依赖于多个前置动作的情况下，可能需要插入哑边和哑节点来避免引进假相关性的概念。
-	 * 
-	 * 思路步骤：
-	 * 1. 计算所有节点入度，并且将入度大于1的节点，记录在一个map<T, boolean>中
-	 * 2. 返回map的size，用于生成的图的总节点数。
-	 * 3. 从起点开始，遍历每一个节点的邻接表。即遍历原图中所有的边。思路还是广度优先搜索那套,使用一个queue来完成。
-	 * @return
-	 */
-	public HashMapAdjacencyList<T> bulitEventNodeGraph(){
-		return null;
-	}
 	
 	/**
 	 * 用于在欧拉环游中，为了便于对访问过的边进行标记。
@@ -1036,6 +1035,106 @@ public class HashMapAdjacencyList<T> {
 			}
 		}
 		return false;
+	}
+	
+	/**
+	 * @version <1>
+	 * 使用贪婪算法解决无向图有权图中的最小生成树问题。
+	 * 
+	 * 使用Prim算法的思想来解决最小生成树的问题。
+	 * 这里复用求有权无圈图最短路径算法的PathInfo类，来跟踪路径信息。
+	 * 不过这里dv表示 当前节点到start路径中最小的边权值。pv是记录引起改变当前节点dv值的节点。
+	 * 
+	 * 核心：选取当前节点所有输出边的权值最小的边。所有这样的边构成的树就是最小生成树。
+	 * 
+	 * 算法套路我是理解了，但是还是有点不理解，为什么这样一定能形成最小生成树
+	 * 
+	 * 思路和步骤基本和广度优先搜索的思路基本相同：
+	 * 1. 从起点开始，遍历各个节点的邻接表。
+	 * 2. 针对当前节点的每个未知的邻接表，判断并且更新当前邻接点的dv和pv值
+	 * 3. 直到完成所有的节点的遍历。也就是需要访问所有的边
+	 * 
+	 * @version <2> 2018-04-01 重新理了一遍书上的思路，发现不知道是我理解的问题，亦或是算法本身的问题。
+	 * 我打算按照我自己的理解走一遍，就如同上面核心中的描述：选取当前节点所有未知节点的最小边权值。
+	 * 
+	 * 基本思路和步骤：
+	 * 1. 从起点开始遍历该点的邻接表，选取未知边中具有最小边权值的边。记录该边权值在v节点的dv值中，该边对应的邻接点记录在pv值中。
+	 * 2. 对未知的邻接点入队，重复步骤1，遍历图中所有的节点。
+	 * 3. 最后根据infoMap即可输出最小生成树。
+	 * 
+	 * 上面想法有个大bug，不好解决成圈问题。
+	 * 
+	 * @version <3> 
+	 * 算了，还是老老实实学习书上的贪婪算法吧，然后贪婪地求解吧。真是想不贪婪都是不行啊。
+	 * 
+	 */
+	public void minSpanningTreeByPrim(T startVetex) {
+		//声明需要的各项变量
+		LinkedList<T> queue = new LinkedList<>();
+		HashMap<T,PathInfo> infoMap = new HashMap<>();
+		
+		//初始化各变量
+		for(T vetex : this.map.keySet()) {
+			infoMap.put(vetex, new PathInfo(false, Integer.MAX_VALUE, null));
+		}
+		//将起点的pathInfo值，置为合适
+		PathInfo sInfo = infoMap.get(startVetex);
+		sInfo.dv = 0;
+		//向队列中插入起点
+		queue.addLast(startVetex);
+		
+		//广度优先搜索,每次都得贪婪得选取下个节点，看来这里还不得不使用二叉堆啊。
+		while(! queue.isEmpty()) {
+			//获取当前节点得信息
+			T nowV = queue.removeFirst();
+			PathInfo nowVInfo = infoMap.get(nowV);
+			nowVInfo.known = true;
+			
+			//遍历邻接表，加入优先队列，获得当前节点所有未知输出边中，权值最小得
+			PriorityQueue<Edge<T>> heap = new PriorityQueue<>(new EdgeComparatorWithWeight());
+			LinkedList<Edge<T>> adjList = this.map.get(nowV).getAdjacencyVetexList();
+			heap.addAll(adjList);
+			
+			//让优先队列按照从小到大的输出各边,直到二叉堆为空
+			while(!heap.isEmpty()) {
+				//取出当前边权值最小的边
+				Edge<T> adjEdeg = heap.poll();
+				//获取当前边的权值及其其他信息
+				int edgeWeight = adjEdeg.getWeight();
+				T adjV = adjEdeg.getNextVetex();
+				PathInfo adjVInfo = infoMap.get(adjV);
+				//必须针对未知节点,并且边权值比记录值更小
+				//bug 1 针对未知邻接点要让别人入队。
+				if(!adjVInfo.known && edgeWeight < adjVInfo.dv) {
+					queue.addLast(adjV);
+					adjVInfo.dv = edgeWeight;
+					adjVInfo.prevNode = nowV;
+				}
+			}
+		}
+		
+		//根据infoMap的preNode信息，既可以显示出生成树的所有路径了
+		//直接遍历infoMap即可，跳过起点
+		for(T vetex : infoMap.keySet()) {
+			if(!vetex.equals(startVetex)) {
+				System.out.printf("{%s,%s}\n", vetex, infoMap.get(vetex).prevNode);
+			}
+		}
+		
+	}
+	
+	/**
+	 * 基于权值的边的比较器
+	 * @author 25040
+	 *
+	 */
+	private class EdgeComparatorWithWeight implements Comparator<Edge<T>>{
+
+		@Override
+		public int compare(Edge<T> arg0, Edge<T> arg1) {
+			return Integer.compare(arg0.getWeight(), arg1.getWeight());
+		}
+		
 	}
 }
 

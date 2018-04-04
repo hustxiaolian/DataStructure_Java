@@ -1,14 +1,15 @@
 package chapterNine;
 
-import java.nio.file.Path;
+
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+
+import chapterEight.DisjSets;
 
 /**
  * 
@@ -113,7 +114,9 @@ public class HashMapAdjacencyList<T> {
 		//graph.findArt("A");
 		//graph.criticalPathAnalysis("start","end");
 		//graph.eularTour("5");
-		graph.minSpanningTreeByPrim("v1");
+		//graph.minSpanningTreeByPrim("v1");
+		graph.minSpanningTreeByKruskal();
+		System.out.println(graph.size());
 		
 	}
 	
@@ -147,7 +150,7 @@ public class HashMapAdjacencyList<T> {
 	 */
 	public void bulitAdjacency(T selfVetex, T otherVetex) {
 		//调用map的put方法，如果self顶点不存在，则新建邻接表加入到map中，返回true，否则如果self顶点存在，不作操作，返回false
-		if(this.map.put(selfVetex, new OneVetexAdjacencyList<>(selfVetex)) != null) {
+		if(this.map.put(selfVetex, new OneVetexAdjacencyList<>(selfVetex)) == null) {
 			++this.currentSize;
 		}
 		OneVetexAdjacencyList<T> adjacencyList = this.map.get(selfVetex);
@@ -163,7 +166,7 @@ public class HashMapAdjacencyList<T> {
 	 * @param otherVetexs
 	 */
 	public void builtAdjacency(T selfVetex, T[] otherVetexs, int[] allEdgeWeight) {
-		if(this.map.put(selfVetex, new OneVetexAdjacencyList<>(selfVetex)) != null) {
+		if(this.map.put(selfVetex, new OneVetexAdjacencyList<>(selfVetex)) == null) {
 			++this.currentSize;
 		}
 		OneVetexAdjacencyList<T> adjacencyList = this.map.get(selfVetex);
@@ -808,6 +811,7 @@ public class HashMapAdjacencyList<T> {
 	 *
 	 * @param <T>
 	 */
+	@SuppressWarnings("hiding")
 	private class EdgeUsingInEularTour<T>{
 		T v1;
 		T v2;
@@ -831,6 +835,7 @@ public class HashMapAdjacencyList<T> {
 		/**
 		 * 必须要重新定义equals和hashcode让哈希表能够正确判断两个边是否相等
 		 */
+		@SuppressWarnings("rawtypes")
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -855,6 +860,7 @@ public class HashMapAdjacencyList<T> {
 			return true;
 		}
 
+		@SuppressWarnings("rawtypes")
 		private HashMapAdjacencyList getOuterType() {
 			return HashMapAdjacencyList.this;
 		}
@@ -1009,8 +1015,7 @@ public class HashMapAdjacencyList<T> {
 	 * @param adjV
 	 * @param allEdgeIsVisited
 	 */
-	private void updateVisitedMap(T vetex, T adjV,
-			HashMap<HashMapAdjacencyList<T>.EdgeUsingInEularTour<T>, Boolean> allEdgeIsVisited) {
+	private void updateVisitedMap(T vetex, T adjV, HashMap<EdgeUsingInEularTour<T>, Boolean> allEdgeIsVisited) {
 		//bug 1 写成了false，弱智了
 		allEdgeIsVisited.put(new EdgeUsingInEularTour<>(vetex, adjV), true);
 		allEdgeIsVisited.put(new EdgeUsingInEularTour<>(adjV, vetex), true);
@@ -1124,7 +1129,7 @@ public class HashMapAdjacencyList<T> {
 	}
 	
 	/**
-	 * 基于权值的边的比较器
+	 * 基于权值的边的比较器。用于Prim最小生成树的算法。
 	 * @author 25040
 	 *
 	 */
@@ -1133,6 +1138,89 @@ public class HashMapAdjacencyList<T> {
 		@Override
 		public int compare(Edge<T> arg0, Edge<T> arg1) {
 			return Integer.compare(arg0.getWeight(), arg1.getWeight());
+		}
+		
+	}
+	
+	/**
+	 * 使用第二种贪婪策略。
+	 * 
+	 * 其基本核心思想和步骤：
+	 * 1. 将所有的无向边按照边权值从小到大排序。
+	 * 2. 依次测试每天是否满足条件。此条件为该边的加入是否与此时已经连接的边成圈。
+	 *    也就是说，判断新插入边的两个端点是否属于一个集合中。这里就用到了第八章不相交集类的union/find例程。
+	 * 
+	 * 傻逼了，我根本不用把有向图化为无向图，我反正使用不相交集类，在<u,v>和<v,u>是等价的。
+	 * 代价是双倍与无向边的空间和时间复杂度。
+	 * 我直接把所有有向边导入到优先队列中即可。
+	 * 
+	 */
+	@SuppressWarnings("unchecked")
+	public void minSpanningTreeByKruskal() {
+		//初始化包括优先队列在内的变量
+		PriorityQueue<EdgeUsingKruskal> queue = new PriorityQueue<>(new EdgeComparatorWithWeight2());
+		//获取当前图中的所有节点的数组。
+		T[] allVetex = (T[])this.map.keySet().toArray();
+		//初始化不相交集类
+		DisjSets<T> set = new DisjSets<>(allVetex.length, allVetex);
+		
+		//遍历邻接表把所有的有向边都加入到优先队列中
+		for(T vetex : this.map.keySet()) {
+			LinkedList<Edge<T>> adjList = this.map.get(vetex).getAdjacencyVetexList();
+			for (Edge<T> edge : adjList) {
+				queue.add(new EdgeUsingKruskal(vetex, edge.getNextVetex(), edge.getWeight()));
+			}
+		}
+		
+		//对优先队列执行deleteMin操作直到优先队列为空为止,
+		while(!queue.isEmpty()) {
+			//获得当前队列中权值最小的边
+			EdgeUsingKruskal edge = queue.remove();
+			
+			//判断改变是否满足条件,不属于一个集合中，即不成圈，那么改变就可以接受。
+			if(!set.inSameSet(edge.v1, edge.v2)) {
+				//将这两点放入一个集合中，表示它们已经连在一起了。即在一棵树上了。
+				set.union(edge.v1, edge.v2);
+				//test
+				System.out.printf("(%s,%s)\n", edge.v1, edge.v2);
+			}
+			
+			
+		}
+	}
+	
+
+	/**
+	 * 又是把无向图的算法应用在有向图中的问题。我到现在还没有想到一个很好的方法。
+	 * 这里复用欧拉环游的Edge类，而且集成了它关于判断边相等的equal方法.
+	 * 该类用于Kruskal最小生成树算法。
+	 * 
+	 * @author 25040
+	 *
+	 */
+	private class EdgeUsingKruskal extends EdgeUsingInEularTour<T>{
+		//创建两个数据域，包括边的边权值和是否被采纳。
+		private int edgeWeight;
+		
+		public EdgeUsingKruskal(T v1, T v2, int weight) {
+			super(v1, v2);
+			this.edgeWeight = weight;
+		}
+		
+	}
+	
+	/**
+	 * 还是基于边权值的比较器。
+	 * 该比较器用于Kruskal最小生成树算法。
+	 * @author 25040
+	 *
+	 */
+	private class EdgeComparatorWithWeight2 implements Comparator<EdgeUsingKruskal>{
+
+		@Override
+		public int compare(HashMapAdjacencyList<T>.EdgeUsingKruskal arg0,
+				HashMapAdjacencyList<T>.EdgeUsingKruskal arg1) {
+			return Integer.compare(arg0.edgeWeight, arg1.edgeWeight);
 		}
 		
 	}

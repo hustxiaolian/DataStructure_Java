@@ -1,142 +1,152 @@
 package chapterEight;
 
+import java.util.HashMap;
+
 /**
- * 第八章 8.3节不相交集类的基本数据结构
+ * 泛型的不相交集类。
+ * 1.可以用来复习下不相交的相关知识。
+ * 2.在后面求解最小生成树的相关问题时，可以复用这部分代码
+ * 
+ * @version <1> 
+ * 我有些想法:
+ * 1. 使用hashMap<T, Integer> + int数组来组实不相交集类。
+ * 2. 直接使用hashMap<T, T>来组织。
+ * 3. 使用T[]+int[] 来组织.使用索引下标来建立泛型数据与编号之间的联系。
+ *    好处是：空间和时间复杂度都能控制得比较好，但是基本不支持动态得插入和删除。
+ *    
+ * 考虑在实际使用不相交集类得时候，往往是已知了全部元素，动态插入得频率低得吓人。
+ * 我选择先用第三种想法，同时，也算是review下过去得代码
+ * 
+ * 改进型想法，我再使用一个HashMap<T,Integer>来弥补T[]不能良好的支持T->int的映射需求，每次都要遍历寻找。
+ * 如果数组的数目比较大，这个线性时间就搞得我很蛋疼，这里算是直接用空间换时间。
+ * 
+ * 
+ * 
  * @author 25040
  *
+ * @param <T>
  */
-public class DisjSets {
+public class DisjSets<T> {
 	
-	/**
-	 * 这里采用第一种方法：使用一个数组保存每个元素的等价类的名字
-	 */
+	private T[] indexToObj;
 	private int[] s;
+	private HashMap<T, Integer> objToindex;
+
+	/**
+	 * 泛型不相交集类的构造函数。
+	 * 其工作职能很简单就是分配内存空间，然后初始化两个数组的变量。
+	 * 在s数组中，使用-1来表示该元素为根；用>0的数组来表达等价关系；用<-1的数字来表达当前等价树的大小
+	 * 在indexToObj数组中，在构造阶段就建立起数组下标和元素之间的关系。
+	 * 
+	 * @param size 
+	 */
+	@SuppressWarnings("unchecked")
+	public DisjSets(int size, T[] allElements) {
+		//分布内存空间
+		this.indexToObj = (T[]) new Object[size];
+		this.s = new int[size];
+		this.objToindex = new HashMap<>();
+		
+		//初始化各变量
+		//看了深入理解计算机系统的后遗症，想到了必须写出局部性良好的代码。不知道这点c和java是不是一样的？
+		for(int i = 0; i < size;++i) {
+			//从减少瞎几把内存引用的角度来说，应该是设置一个临时变量来存储allElements[i]
+			//也算是养成这种习惯吧，尽量减少不必要的内存引用和函数调用
+			T temp = allElements[i];
+			this.indexToObj[i] = temp;
+			this.objToindex.put(temp, i);
+		}
+		
+		for(int i = 0;i < size;++i) {
+			this.s[i] = -1;
+		}
+		
+	}
 	
 	/**
-	 * 不相交集类的构造函数，主要是完成数组内存分配，以及将所有的等价类初始化为false，即-1；
-	 * @param numElemnets
+	 * union两个集合。
+	 * 
+	 * 思路和步骤都非常简单：
+	 * 1. 从map中获取元素对应的编号
+	 * 2. 然后执行按照树大小灵巧求并算法。注意是负数的大小判断问题。
+	 * 
+	 * @param ele1
+	 * @param ele2
 	 */
-	public DisjSets(int numElemnets) {
-		this.s = new int[numElemnets];
-		for(int i = 0;i < s.length;++i) {
-			s[i] = -1;
+	public void union(T ele1, T ele2) {
+		int num1 = this.objToindex.get(ele1);
+		int num2 = this.objToindex.get(ele2);
+		
+		//如果元素1的树更大，即1<2,那我们让元素2的嫁接到元素1的树上
+		if(s[num1] < s[num2]) {
+			//元素1的树更大
+			s[num2] = num1;
+			s[num1]--;
+		}
+		else {
+			//元素2的树更大
+			s[num1] = num2;
+			s[num2]--;
 		}
 	}
 	
+	
 	/**
-	 * 合并操作,将两个等价类合并为一个等价类，在数组的具体操作为，将root1 的元素 变为指向root2，以此显示他们之间的关系
-	 * 这里的union实际上运算了树的概念来解释会比较好。
-	 * {@code s[root1] = root2}这表明了root2代表的树成为了root1的子树，即从两个等价类合并为了一个等价类。
 	 * 
-	 * 当然，书上说这不是最好的方法。后面知道了，使用灵巧求并方法（按大小和高度求并）避免树长的过于糟糕
-	 * @param root1
-	 * @param root2
+	 * 该find查找例程的核心思想就是我们不要在乎它返回的数字，而是要求两个等价的元素应该返回同样的数字。
+	 * 
+	 * 
+	 * @param ele1
+	 * @return 该等价树的根节点
 	 */
-	public void union(int root1, int root2) {
-		this.s[root1] = root2; 
+	public int find(T ele) {
+		int num1 = this.objToindex.get(ele);
+		return findInPathCompresion(num1);
 	}
 	
 	/**
-	 * find查找例程。由于-1表示树的根，也就是说，在这里等价类的具体名字为数组下标，find例程是为了寻找等价类的名字，因此，就是要
-	 * 寻找s[x] == -1的下标，如果s[x] != -1 即该节点不为根，需要继续递归find。
-	 * 记住，我们的问题不要求find操作返回特定的名字，而只是要求当且仅当两个元素属于相同集合时作用在这两个元素上的find返回相同的名字。
-	 * @param x
+	 * 私有的递归find例程。
+	 * 非路径压缩的递归例程。
+	 * @param num1
 	 * @return
 	 */
-	public int find(int x) {
-		if(s[x] < 0) {
-			return x;
+	@SuppressWarnings("unused")
+	private int find(int num1) {
+		if(s[num1] < 0) {
+			return num1;
 		}
 		else {
-			return find(s[x]);
+			return find(s[num1]);
 		}
-	}
+	} 
 	
 	/**
-	 * 注意union方法的前提时，root1和root2并没有关系。add方法需要find提前检查
-	 * 灵巧求并算法，可以分为按照树的大小求并以及按照树的高度求并。以此来避免等价类树的情况变得很糟糕，深度非常深。
-	 * 在按照树的大小进行求并方法中，由于我们使用了数组来存储等价类，我们利用数组元素来存储对应等价类树大小的负值.
-	 * 而在按照树的高度来进行求并方法中，同样，我们使用数组元素来存储对应等价树类的相关信息，具体存储为高度的负值再-1（因为树高为0的树非负）
+	 * 路径压缩算法。其核心思想和上面的find例程差不多。
+	 * 但是该算法多了一步。
+	 * 仔细思考下，递归一层就相当于将s[num1]=s[num2]=s[num2]= root
+	 * 这样，将递归的过程中，把路径上所有的节点的父类引用都直接指向了根节点。
+	 * 关键是，它与按树大小灵巧求并算法完美兼容。
+	 * @return
 	 */
-	public void unionByTreeHeight(int root1, int root2) {
-		if(s[root2] < s[root1]) {
-			//root2代表树更高，因此让root1成为root2的子树，并且更新高度信息
-			s[root1] = root2;
+	private int findInPathCompresion(int num1) {
+		if(s[num1] < 0) {
+			return num1;
 		}
 		else {
-			//root1代表的树更高,让root2成为root1的子树，或者两树登高，则需要更新高度信息
-			if(s[root1] == s[root2]) {
-				s[root2]--;//由于数高的储存形式是负值，因此是--而不是++
-			}
-			s[root2] = root1;
+			//关键而风骚的一步
+			return s[num1] = findInPathCompresion(s[num1]);
 		}
 	}
 	
 	/**
-	 * 按照树的大小进行求并方法中，由于我们使用了数组来存储等价类，我们利用数组元素来存储对应等价类树大小的负值.
-	 * @param root1 
-	 * @param root2
+	 * 判断两个元素是否等价。也就是它们是否在一个集合中。
+	 * @param ele1 
+	 * @param ele2
 	 */
-	public void unionByTreeSize(int root1, int root2) {
-		if(s[root1] < s[root2]) {
-			//是则表示root1的树比root2的树更大，所以应该让root2成为root1的儿子
-			//翻译成容易懂的话就是root2得daddy is root1;
-			s[root2] = root1;
-			//更新树大小的信息
-			s[root1]--;
-		}
-		else {
-			//同理
-			s[root1] = root2;
-			s[root2]--;
-		}
-	}
-	
-	/**
-	 * 将x，y两者建立关系。意味着两个集合的合并
-	 * @param x
-	 * @param y
-	 */
-	public void add(int x,int y) {
-		//判断两者是否已经建立了关系
-		if(findInPathCompresion(x) != findInPathCompresion(y)) {
-			unionByTreeSize(findInPathCompresion(x), findInPathCompresion(y));
-		}
-	}
-	
-	/**
-	 * 路径压缩算法。首先，我们为什么使用路径压缩算法？这是基于这样的观察：
-	 * 执行合并操作的任何算法都将产生相同的最坏情形的树，因为它必然会随意打破树之间的平衡。
-	 * 路径压缩在findInPathCompresion程序运行期间进行而与用来执行union的方法无关。
-	 * 路径压缩产生的效果：从x到根的路径上的每一个节点都使其父节点成为该树的根。
-	 * 紧紧的抓住一点：s[x] < 0就是表示根节点，同时表明树高；否则就是指向其父节点，
-	 * 这相当于一颗指向倒过来的多叉树，只能从儿子到父亲，而不是传统的父亲到儿子。
-	 */
-	public int findInPathCompresion(int x) {
-		if(s[x] < 0) {
-			return x;
-		}
-		else {
-			return s[x] = findInPathCompresion(s[x]);
-		}
-	}
-	
-	/**
-	 * 便于输出观察
-	 */
-	@Override
-	public String toString() {
-		StringBuffer sb = new StringBuffer();
-		for(int i = 0;i < this.s.length; ++i) {
-			sb.append("\t").append(i);
-		}
-		sb.append("\n");
+	public boolean inSameSet(T ele1, T ele2) {
+		int num1 = objToindex.get(ele1);
+		int num2 = objToindex.get(ele2);
 		
-		for(int i = 0;i < this.s.length; ++i) {
-			sb.append("\t").append(s[i]);
-		}
-		sb.append("\n");
-		
-		return sb.toString();
+		return findInPathCompresion(num1) == findInPathCompresion(num2);
 	}
 }

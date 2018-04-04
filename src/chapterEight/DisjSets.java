@@ -28,6 +28,12 @@ import java.util.HashMap;
  */
 public class DisjSets<T> {
 	
+	public static void main(String[] args) {
+		DisjSets<String> d = new DisjSets<>(7, new String[] {"v1","v2","v3","v4","v5","v6","v7"});
+		d.union("v1", "v2");
+		System.out.println(d.inSameSet("v1", "v3"));
+	}
+	
 	private T[] indexToObj;
 	private int[] s;
 	private HashMap<T, Integer> objToindex;
@@ -64,11 +70,8 @@ public class DisjSets<T> {
 	}
 	
 	/**
-	 * union两个集合。
 	 * 
-	 * 思路和步骤都非常简单：
-	 * 1. 从map中获取元素对应的编号
-	 * 2. 然后执行按照树大小灵巧求并算法。注意是负数的大小判断问题。
+	 * 使用之前，请务必先用isSameSet测试一下。
 	 * 
 	 * @param ele1
 	 * @param ele2
@@ -76,17 +79,35 @@ public class DisjSets<T> {
 	public void union(T ele1, T ele2) {
 		int num1 = this.objToindex.get(ele1);
 		int num2 = this.objToindex.get(ele2);
-		
+		int root1 = findInPathCompresion(num1);
+		int root2 = findInPathCompresion(num2);
+		unionTowTreeRoot(root1, root2);
+	}
+	
+	/**
+	 * union两个集合。
+	 * 
+	 * 思路和步骤都非常简单：
+	 * 1. 从map中获取元素对应的编号
+	 * 2. 然后执行按照树大小灵巧求并算法。注意是负数的大小判断问题。
+	 * 
+	 * bug
+	 * 算法的思想错误，这里不能直接这样。应该是树的根节点直接合并。不能是树中任意两个元素。
+	 * 
+	 * @param root1
+	 * @param root2
+	 */
+	private void unionTowTreeRoot(int root1, int root2) {
 		//如果元素1的树更大，即1<2,那我们让元素2的嫁接到元素1的树上
-		if(s[num1] < s[num2]) {
+		if(s[root1] < s[root2]) {
 			//元素1的树更大
-			s[num2] = num1;
-			s[num1]--;
+			s[root2] = root1;
+			s[root1]--;
 		}
 		else {
 			//元素2的树更大
-			s[num1] = num2;
-			s[num2]--;
+			s[root1] = root2;
+			s[root2]--;
 		}
 	}
 	
